@@ -22,6 +22,9 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
+from core.utils.math.matrix import Matrix
+from math import pi
+
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -254,7 +257,60 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
+def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file):
+
+    cam_infos = []
+
+    with open(os.path.join(storage_path, metadata_file)) as metadata_json:
+        content = json.load(metadata_json)
+        foV_x = content["camera_info"]["x_angle"]
+        foV_y = content["camera_info"]["y_angle"]
+        image_height = content["image_height"]
+        image_width = content["image_width"]
+        for idx, sample in enumerate(content["cameras"]):
+            image_name = file_name + '_' + str(idx + 1) + "." + extension
+            image_path = os.path.join(storage_path, image_name)
+            image = Image.open(image_path)
+            world2camera = np.array(sample, dtype=np.float32)
+            # change from OpenGL/Blender camera axes (Y up, Z back) to COLMAP (Y down, Z forward)
+            world2camera = Matrix.getRotationX(pi) @ world2camera
+            # R is stored transposed due to 'glm' in CUDA code
+            R = world2camera[:3,:3].transpose()
+            T = world2camera[:3, 3]
+            cam_info = CameraInfo(idx, R=R, T=T, FovX=foV_x, FovY=foV_y, image=image, image_path=image_path, image_name=image_name, width=image_width, height=image_height)
+            cam_infos.append(cam_info)
+    ply_path = os.path.join(storage_path, "points3d.ply")
+     # Since this data set has no colmap data, we start with random points
+    num_pts = 100_000
+    print(f"Generating random point cloud ({num_pts})...")
+        
+    # We create random points inside the bounds of the synthetic Blender scenes
+    xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
+    shs = np.random.random((num_pts, 3)) / 255.0
+    pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+    storePly(ply_path, xyz, SH2RGB(shs) * 255)
+    try:
+        pcd = fetchPly(ply_path)
+    except:
+        pcd = None
+    return cam_infos, pcd
+
+
+
+def readSyntheticSceneInfo(storage_path, file_name, extension, metadata_file):
+    cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file)
+    nerf_normalization = getNerfppNorm(cam_infos)
+    
+    scene_info = SceneInfo( point_cloud=pcd,
+                            train_cameras=cam_infos,
+                            test_cameras=[],
+                            nerf_normalization=nerf_normalization,
+                            ply_path=storage_path + "\\points3d.ply")
+    return scene_info
+        
+
 sceneLoadTypeCallbacks = {
     "Colmap": readColmapSceneInfo,
-    "Blender" : readNerfSyntheticInfo
+    "Blender" : readNerfSyntheticInfo,
+    "Synthetic": readSyntheticSceneInfo
 }
