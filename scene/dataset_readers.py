@@ -22,7 +22,7 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
-from core.utils.math.matrix import Matrix
+from utils.camera_utils import Matrix
 from math import pi
 
 
@@ -264,6 +264,7 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
     with open(os.path.join(storage_path, metadata_file)) as metadata_json:
         content = json.load(metadata_json)
         foV_x = content["camera_info"]["x_angle"]
+        #fovx = content["camera_info"]["x_angle"]
         foV_y = content["camera_info"]["y_angle"]
         image_height = content["image_height"]
         image_width = content["image_width"]
@@ -271,26 +272,59 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
             image_name = file_name + '_' + str(idx + 1) + "." + extension
             image_path = os.path.join(storage_path, image_name)
             image = Image.open(image_path)
-            world2camera = np.array(sample, dtype=np.float32)
+
+
+            c2w = np.array(sample, dtype=np.float32)
+
+            c2w[:3, 1:3] *= -1
+
+            
+
+            # get the world-to-camera transform and set R, T
+            w2c = np.linalg.inv(c2w)
+            #w2c = Matrix.getRotationX(pi) @ w2c
+            R = np.transpose(w2c[:3,:3])  # R is stored transposed due to 'glm' in CUDA code
+            T = w2c[:3, 3]
+
+            #im_data = np.array(image.convert("RGBA"))
+            
+            #white_background = False
+
+            #bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
+
+            #norm_data = im_data / 255.0
+            #arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
+            #image = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
+
+            #fovy = focal2fov(fov2focal(fovx, image.size[0]), image.size[1])
+            #FovY = fovy 
+            #FovX = fovx
+
+            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
+                            image_path=image_path, image_name=image_name, width=image_width, height=image_height))
+
+
+
             # change from OpenGL/Blender camera axes (Y up, Z back) to COLMAP (Y down, Z forward)
-            world2camera = Matrix.getRotationX(pi) @ world2camera
+            #world2camera = Matrix.getRotationX(pi) @ world2camera
             # R is stored transposed due to 'glm' in CUDA code
-            R = world2camera[:3,:3].transpose()
-            T = world2camera[:3, 3]
-            cam_info = CameraInfo(idx, R=R, T=T, FovX=foV_x, FovY=foV_y, image=image, image_path=image_path, image_name=image_name, width=image_width, height=image_height)
-            cam_infos.append(cam_info)
+            #R = world2camera[:3,:3].transpose()
+            #T = world2camera[:3, 3]
+            #cam_info = CameraInfo(idx, R=R, T=T, FovX=foV_x, FovY=foV_y, image=image, image_path=image_path, image_name=image_name, width=image_width, height=image_height)
+            #cam_infos.append(cam_info)
     ply_path = os.path.join(storage_path, "points3d.ply")
      # Since this data set has no colmap data, we start with random points
-    num_pts = 100_000
-    print(f"Generating random point cloud ({num_pts})...")
+    #num_pts = 100_000
+    #print(f"Generating random point cloud ({num_pts})...")
         
     # We create random points inside the bounds of the synthetic Blender scenes
-    xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
-    shs = np.random.random((num_pts, 3)) / 255.0
-    pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
-    storePly(ply_path, xyz, SH2RGB(shs) * 255)
+    #xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
+    #shs = np.random.random((num_pts, 3)) / 255.0
+    #pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+    #storePly(ply_path, xyz, SH2RGB(shs) * 255)
     try:
         pcd = fetchPly(ply_path)
+        print('Evenly sampled point cloud successfully imported.')
     except:
         pcd = None
     return cam_infos, pcd
@@ -305,7 +339,7 @@ def readSyntheticSceneInfo(storage_path, file_name, extension, metadata_file):
                             train_cameras=cam_infos,
                             test_cameras=[],
                             nerf_normalization=nerf_normalization,
-                            ply_path=storage_path + "\\points3d.ply")
+                            ply_path=os.path.join(storage_path, "points3d.ply"))
     return scene_info
         
 
