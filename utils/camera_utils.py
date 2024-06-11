@@ -50,7 +50,8 @@ def loadCam(args, id, cam_info, resolution_scale):
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
                   image=gt_image, gt_alpha_mask=loaded_mask,
-                  image_name=cam_info.image_name, uid=id, data_device=args.data_device)
+                  image_name=cam_info.image_name, uid=id, data_device=args.data_device,
+                  projection_matrix=cam_info.projection_matrix)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
@@ -81,63 +82,3 @@ def camera_to_JSON(id, camera : Camera):
         'fx' : fov2focal(camera.FovX, camera.width)
     }
     return camera_entry
-
-
-
-class Matrix():
-
-    @staticmethod
-    def getIdentity():
-        return np.eye(4,4, dtype=np.float32)
-    
-    @staticmethod
-    def getTranslation(x, y, z):
-        return np.array([[1, 0, 0, x],
-                        [0, 1, 0, y],
-                        [0, 0, 1, z],
-                        [0, 0, 0, 1]], dtype=np.float32)
-    
-    @staticmethod
-    def getRotationX(angle):
-        c = cos(angle)
-        s = sin(angle)
-        return np.array([[1, 0, 0, 0],
-                        [0, c, -s, 0],
-                        [0, s, c, 0],
-                        [0, 0, 0, 1]], dtype=np.float32)
-    
-    @staticmethod
-    def getRotationY(angle):
-        c = cos(angle)
-        s = sin(angle)
-        return np.array([[c, 0, s, 0],
-                        [0, 1, 0, 0],
-                        [-s, 0, c, 0],
-                        [0, 0, 0, 1]], dtype=np.float32)
-    
-    @staticmethod
-    def getRotationZ(angle):
-        c = cos(angle)
-        s = sin(angle)
-        return np.array([[c, -s, 0, 0],
-                        [s, c, 0, 0],
-                        [0, 0, 1, 0],
-                        [0, 0, 0, 1]], dtype=np.float32)
-    @staticmethod
-    def getScale(s):
-        return np.array([[s, 0, 0, 0],
-                        [0, s, 0, 0],
-                        [0, 0, s, 0],
-                        [0, 0, 0, 1]], dtype=np.float32)
-    
-    @staticmethod
-    def getProjection(angleOfView=60, aspectRatio=1, near=0.1, far= 1000):
-        a = angleOfView * pi/180
-        d = 1.0/tan(a/2)
-        r = aspectRatio
-        b = (far + near)/(near - far)
-        c = 2 * far * near/ (near - far)
-        return np.array([[d/r, 0, 0, 0], 
-                            [0, d, 0, 0],
-                            [0, 0, b, c],
-                            [0, 0, -1, 0]], dtype=np.float32)

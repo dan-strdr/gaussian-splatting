@@ -17,7 +17,8 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
                  image_name, uid,
-                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda"
+                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
+                 projection_matrix = None
                  ):
         super(Camera, self).__init__()
 
@@ -52,12 +53,14 @@ class Camera(nn.Module):
         self.scale = scale
 
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
-        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
-        #print(self.projection_matrix)
-        self.projection_matrix = torch.tensor(([[ 1.8106601,  0,         0,         0       ],
-        [ 0,         2.4142137,  0,         0       ],
-        [ 0,         0,        -1.00002,   -0.0200002],
-        [ 0,         0,        -1,         0       ]])).transpose(0,1).cuda()
+
+        if projection_matrix is not None:
+            # Correct z axis orientation from OpenGL to COLMAP
+            projection_matrix[3, 2] = 1
+            self.projection_matrix = torch.from_numpy(projection_matrix).transpose(0,1).cuda()
+        else:
+            self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
 
