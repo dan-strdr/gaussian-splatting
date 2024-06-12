@@ -36,6 +36,8 @@ class CameraInfo(NamedTuple):
     width: int
     height: int
     projection_matrix: np.array
+    bc_image: np.array
+    mro_image: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -256,13 +258,14 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file):
+def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file):
 
     train_cam_infos = []
     test_cam_infos = []
 
     with open(os.path.join(storage_path, metadata_file)) as metadata_json:
         content = json.load(metadata_json)
+        data_types = content["data_types"]
         test_idxs = content["test_idxs"]
         foV_x = content["camera_info"]["x_angle"]
         foV_y = content["camera_info"]["y_angle"]
@@ -272,8 +275,14 @@ def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension,
         projection_matrix = np.array(projection_matrix, dtype=np.float32)
         for idx, sample in enumerate(content["cameras"]):
             image_name = file_name + '_' + str(idx) + "." + extension
-            image_path = os.path.join(storage_path, data_type, image_name)
+            image_path = os.path.join(storage_path, data_types[0], image_name)
             image = Image.open(image_path)
+
+            bc_image_path = os.path.join(storage_path, data_types[1], image_name)
+            bc_image = Image.open(bc_image_path)
+
+            mro_image_path = os.path.join(storage_path, data_types[2], image_name)
+            mro_image = Image.open(mro_image_path)
 
             c2w = np.array(sample, dtype=np.float32)
 
@@ -288,11 +297,11 @@ def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension,
             if idx in test_idxs:
                 test_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image))
             else:
                 train_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image))
 
 
     ply_path = os.path.join(storage_path, "points3d.ply")
@@ -305,8 +314,8 @@ def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension,
 
 
 
-def readSyntheticSceneInfo(storage_path, data_type, file_name, extension, metadata_file):
-    train_cam_infos, test_cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file)
+def readSyntheticSceneInfo(storage_path, file_name, extension, metadata_file):
+    train_cam_infos, test_cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file)
     nerf_normalization = getNerfppNorm(train_cam_infos)
     
     scene_info = SceneInfo( point_cloud=pcd,

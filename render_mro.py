@@ -14,7 +14,7 @@ from scene import Scene
 import os
 from tqdm import tqdm
 from os import makedirs
-from gaussian_renderer import render
+from gaussian_renderer import render_mro
 import torchvision
 from utils.general_utils import safe_state
 from argparse import ArgumentParser
@@ -22,15 +22,15 @@ from arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_renderer import GaussianModel
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
-    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "render")
-    gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "render")
+    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "met_rough_occ")
+    gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "met_rough_occ")
 
     makedirs(render_path, exist_ok=True)
     makedirs(gts_path, exist_ok=True)
 
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
-        rendering = render(view, gaussians, pipeline, background)["render"]
-        gt = view.original_image[0:3, :, :]
+        rendering = render_mro(view, gaussians, pipeline, background)["render"]
+        gt = view.mro_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
 
