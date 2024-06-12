@@ -258,10 +258,12 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
 
 def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file):
 
-    cam_infos = []
+    train_cam_infos = []
+    test_cam_infos = []
 
     with open(os.path.join(storage_path, metadata_file)) as metadata_json:
         content = json.load(metadata_json)
+        test_idxs = content["test_idxs"]
         foV_x = content["camera_info"]["x_angle"]
         foV_y = content["camera_info"]["y_angle"]
         image_height = content["image_height"]
@@ -283,7 +285,12 @@ def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension,
             R = np.transpose(w2c[:3,:3])  # R is stored transposed due to 'glm' in CUDA code
             T = w2c[:3, 3]
 
-            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
+            if idx in test_idxs:
+                test_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
+                            image_path=image_path, image_name=image_name, width=image_width, height=image_height,
+                            projection_matrix=projection_matrix))
+            else:
+                train_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
                             projection_matrix=projection_matrix))
 
@@ -294,17 +301,17 @@ def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension,
         print('Evenly sampled point cloud successfully imported.')
     except:
         pcd = None
-    return cam_infos, pcd
+    return train_cam_infos, test_cam_infos, pcd
 
 
 
 def readSyntheticSceneInfo(storage_path, data_type, file_name, extension, metadata_file):
-    cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file)
-    nerf_normalization = getNerfppNorm(cam_infos)
+    train_cam_infos, test_cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file)
+    nerf_normalization = getNerfppNorm(train_cam_infos)
     
     scene_info = SceneInfo( point_cloud=pcd,
-                            train_cameras=cam_infos,
-                            test_cameras=[],
+                            train_cameras=train_cam_infos,
+                            test_cameras=test_cam_infos,
                             nerf_normalization=nerf_normalization,
                             ply_path=os.path.join(storage_path, "points3d.ply"))
     return scene_info
