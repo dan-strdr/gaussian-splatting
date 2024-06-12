@@ -256,7 +256,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file):
+def readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file):
 
     cam_infos = []
 
@@ -269,8 +269,8 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
         projection_matrix = content["camera_projection_matrix"]
         projection_matrix = np.array(projection_matrix, dtype=np.float32)
         for idx, sample in enumerate(content["cameras"]):
-            image_name = file_name + '_' + str(idx + 1) + "." + extension
-            image_path = os.path.join(storage_path, image_name)
+            image_name = file_name + '_' + str(idx) + "." + extension
+            image_path = os.path.join(storage_path, data_type, image_name)
             image = Image.open(image_path)
 
             c2w = np.array(sample, dtype=np.float32)
@@ -298,8 +298,8 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
 
 
 
-def readSyntheticSceneInfo(storage_path, file_name, extension, metadata_file):
-    cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_file)
+def readSyntheticSceneInfo(storage_path, data_type, file_name, extension, metadata_file):
+    cam_infos, pcd  = readSyntheticCamerasAndPoints(storage_path, data_type, file_name, extension, metadata_file)
     nerf_normalization = getNerfppNorm(cam_infos)
     
     scene_info = SceneInfo( point_cloud=pcd,
