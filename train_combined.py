@@ -125,7 +125,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 progress_bar.close()
 
             # Log and save
-            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background))
+            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render_combined, (pipe, background))
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -201,10 +201,35 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     psnr_test += psnr(image, gt_image).mean().double()
                 psnr_test /= len(config['cameras'])
                 l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {}: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
+                print("\n[ITER {}] Evaluating {} render: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
                 if tb_writer:
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
+                
+                met_rough_occ_l1_test = 0.0
+                met_rough_occ_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    met_rough_occ_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'met_rough_occ')["render"], 0.0, 1.0)
+                    met_rough_occ_gt_image = torch.clamp(viewpoint.mro_image.to("cuda"), 0.0, 1.0)
+                    
+                    met_rough_occ_l1_test += l1_loss(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                    met_rough_occ_psnr_test += psnr(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                met_rough_occ_psnr_test /= len(config['cameras'])
+                met_rough_occ_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} met_rough_occ: L1 {} PSNR {}".format(iteration, config['name'], met_rough_occ_l1_test, met_rough_occ_psnr_test))
+
+
+                base_color_l1_test = 0.0
+                base_color_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    base_color_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'base_color')["render"], 0.0, 1.0)
+                    base_color_gt_image = torch.clamp(viewpoint.bc_image.to("cuda"), 0.0, 1.0)
+                    
+                    base_color_l1_test += l1_loss(base_color_image, base_color_gt_image).mean().double()
+                    base_color_psnr_test += psnr(base_color_image, base_color_gt_image).mean().double()
+                base_color_psnr_test /= len(config['cameras'])
+                base_color_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} base_color: L1 {} PSNR {}".format(iteration, config['name'], base_color_l1_test, base_color_psnr_test))
 
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
