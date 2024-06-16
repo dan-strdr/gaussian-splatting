@@ -110,6 +110,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         Ll1 = l1_loss(base_color_image, base_color_gt_image)
         loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image))
 
+        # base_color
+        normals_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'normals')
+        normals_image = normals_render_pkg["render"]
+
+        # Loss
+        normals_gt_image = viewpoint_cam.normals_image.cuda()
+        Ll1 = l1_loss(normals_image, normals_gt_image)
+        loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normals_image, normals_gt_image))
 
         loss.backward()
 

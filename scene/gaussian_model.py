@@ -49,6 +49,7 @@ class GaussianModel:
         self._features_rest = torch.empty(0)
         self._mro = torch.empty(0)
         self._bc = torch.empty(0)
+        self._normals = torch.empty(0)
         self._scaling = torch.empty(0)
         self._rotation = torch.empty(0)
         self._opacity = torch.empty(0)
@@ -68,6 +69,7 @@ class GaussianModel:
             self._features_rest,
             self._mro,
             self._bc,
+            self._normals,
             self._scaling,
             self._rotation,
             self._opacity,
@@ -85,6 +87,7 @@ class GaussianModel:
         self._features_rest,
         self._mro,
         self._bc,
+        self._normals,
         self._scaling, 
         self._rotation, 
         self._opacity,
@@ -123,6 +126,10 @@ class GaussianModel:
     @property
     def get_bc(self):
         return self._bc
+    
+    @property
+    def get_normals(self):
+        self._normals
 
     @property
     def get_opacity(self):
@@ -157,6 +164,7 @@ class GaussianModel:
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._mro = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._bc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
+        self._normals = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
@@ -173,6 +181,7 @@ class GaussianModel:
             {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
             {'params': [self._mro], 'lr': training_args.mro_lr, "name": "f_mro"},
             {'params': [self._bc], 'lr': training_args.bc_lr, "name": "f_bc"},
+            {'params': [self._normals], 'lr': training_args.normals_lr, "name": "f_normals"},
             {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
             {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
             {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}

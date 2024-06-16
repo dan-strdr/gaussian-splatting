@@ -256,6 +256,8 @@ def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
                 shs = pc.get_mro
             elif data_type == 'base_color':
                 shs = pc.get_bc
+            elif data_type == 'normals':
+                shs = pc.get_normals
 
     else:
         colors_precomp = override_color
