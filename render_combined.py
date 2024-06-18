@@ -31,6 +31,9 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     base_color_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "base_color")
     base_color_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "base_color")
 
+    normal_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "normal")
+    normal_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "normal")
+
     makedirs(render_render_path, exist_ok=True)
     makedirs(render_gts_path, exist_ok=True)
 
@@ -39,6 +42,9 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     makedirs(base_color_render_path, exist_ok=True)
     makedirs(base_color_gts_path, exist_ok=True)
+
+    makedirs(normal_render_path, exist_ok=True)
+    makedirs(normal_gts_path, exist_ok=True)
 
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'render')["render"]
@@ -55,6 +61,11 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         gt = view.bc_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(base_color_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(base_color_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        rendering = render_combined(view, gaussians, pipeline, background, data_type = 'normal')["render"]
+        gt = view.normal_image[0:3, :, :]
+        torchvision.utils.save_image(rendering, os.path.join(normal_render_path, '{0:05d}'.format(idx) + ".png"))
+        torchvision.utils.save_image(gt, os.path.join(normal_gts_path, '{0:05d}'.format(idx) + ".png"))
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     with torch.no_grad():

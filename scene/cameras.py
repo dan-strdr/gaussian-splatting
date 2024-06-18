@@ -18,7 +18,7 @@ class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
-                 projection_matrix = None, bc_image = None, mro_image = None, normals_image=None
+                 projection_matrix = None, bc_image = None, mro_image = None, normal_image=None
                  ):
         super(Camera, self).__init__()
 
@@ -42,8 +42,8 @@ class Camera(nn.Module):
             self.bc_image = bc_image.clamp(0.0, 1.0).to(self.data_device)
         if mro_image is not None:
             self.mro_image = mro_image.clamp(0.0, 1.0).to(self.data_device)
-        if normals_image is not None:
-            self.normals_image = normals_image.clamp(0.0, 1.0).to(self.data_device)
+        if normal_image is not None:
+            self.normal_image = normal_image.clamp(0.0, 1.0).to(self.data_device)
         self.image_width = self.original_image.shape[2]
         self.image_height = self.original_image.shape[1]
 

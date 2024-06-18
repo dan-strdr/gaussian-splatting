@@ -110,14 +110,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         Ll1 = l1_loss(base_color_image, base_color_gt_image)
         loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image))
 
-        # base_color
-        normals_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'normals')
-        normals_image = normals_render_pkg["render"]
+        # normal
+        normal_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'normal')
+        normal_image = normal_render_pkg["render"]
 
         # Loss
-        normals_gt_image = viewpoint_cam.normals_image.cuda()
-        Ll1 = l1_loss(normals_image, normals_gt_image)
-        loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normals_image, normals_gt_image))
+        normal_gt_image = viewpoint_cam.normal_image.cuda()
+        Ll1 = l1_loss(normal_image, normal_gt_image)
+        loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
 
         loss.backward()
 
@@ -238,6 +238,19 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 base_color_psnr_test /= len(config['cameras'])
                 base_color_l1_test /= len(config['cameras'])          
                 print("\n[ITER {}] Evaluating {} base_color: L1 {} PSNR {}".format(iteration, config['name'], base_color_l1_test, base_color_psnr_test))
+
+
+                normal_l1_test = 0.0
+                normal_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    normal_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'normal')["render"], 0.0, 1.0)
+                    normal_gt_image = torch.clamp(viewpoint.normal_image.to("cuda"), 0.0, 1.0)
+                    
+                    normal_l1_test += l1_loss(normal_image, normal_gt_image).mean().double()
+                    normal_psnr_test += psnr(normal_image, normal_gt_image).mean().double()
+                normal_psnr_test /= len(config['cameras'])
+                normal_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} normal: L1 {} PSNR {}".format(iteration, config['name'], normal_l1_test, normal_psnr_test))
 
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)

@@ -38,7 +38,7 @@ class CameraInfo(NamedTuple):
     projection_matrix: np.array
     bc_image: np.array
     mro_image: np.array
-    normals_image: np.array
+    normal_image: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -285,8 +285,8 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
             mro_image_path = os.path.join(storage_path, data_types[2], image_name)
             mro_image = Image.open(mro_image_path)
 
-            normals_image_path = os.path.join(storage_path, data_types[3], image_name)
-            normals_image = Image.open(normals_image_path)
+            normal_image_path = os.path.join(storage_path, data_types[3], image_name)
+            normal_image = Image.open(normal_image_path)
 
             c2w = np.array(sample, dtype=np.float32)
 
@@ -301,11 +301,11 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
             if idx in test_idxs:
                 test_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normals_image=normals_image))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image))
             else:
                 train_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normals_image=normals_image))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image))
 
 
     ply_path = os.path.join(storage_path, "points3d.ply")
