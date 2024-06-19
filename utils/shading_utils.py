@@ -8,7 +8,7 @@ def shade(viewpoint_camera, pc):
     #view_pos = torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
     view_pos = torch.from_numpy(viewpoint_camera.camera_position).to(viewpoint_camera.data_device)
 
-    print('viewpoint_camera.camera_center', viewpoint_camera.T)
+    print('viewpoint_camera.T', viewpoint_camera.T)
     print('viewpoint_camera.camera_center', viewpoint_camera.camera_center)
     print('viewpoint_camera.camera_position', viewpoint_camera.camera_position)
 
@@ -21,7 +21,7 @@ def shade(viewpoint_camera, pc):
     #print('pc.get_bc', pc.get_bc)
     #print('SH2RGB(pc.get_bc)', SH2RGB(pc.get_bc).max(axis=0), SH2RGB(pc.get_bc).min(axis=0), torch.topk(SH2RGB(pc.get_bc), dim=0, k=10))
 
-    base_color = torch.pow(torch.clip(SH2RGB(pc.get_bc), 0), 2.2) # torch.pow(SH2RGB(pc.get_bc), 2.2)
+    base_color = torch.pow(torch.clip(SH2RGB(pc.get_bc), 0, 1), 2.2) # torch.pow(SH2RGB(pc.get_bc), 2.2)
 
     #print('SH2RGB_shading(base_color)', SH2RGB_shading(base_color), SH2RGB_shading(base_color).shape)
     #print('base_color.shape', base_color.shape, base_color.dtype, torch.isnan(base_color).sum())
