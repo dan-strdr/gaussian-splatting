@@ -34,6 +34,9 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     normal_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "normal")
     normal_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "normal")
 
+    shading_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "shading")
+    shading_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "shading")
+
     makedirs(render_render_path, exist_ok=True)
     makedirs(render_gts_path, exist_ok=True)
 
@@ -46,7 +49,11 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     makedirs(normal_render_path, exist_ok=True)
     makedirs(normal_gts_path, exist_ok=True)
 
+    makedirs(shading_render_path, exist_ok=True)
+    makedirs(shading_gts_path, exist_ok=True)
+
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
+        print('idx:', idx)
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'render')["render"]
         gt = view.original_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(render_render_path, '{0:05d}'.format(idx) + ".png"))
@@ -66,6 +73,13 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         gt = view.normal_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(normal_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(normal_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        rendering = render_combined(view, gaussians, pipeline, background, data_type = 'shading')["render"]
+        gt = view.original_image[0:3, :, :]
+        torchvision.utils.save_image(rendering, os.path.join(shading_render_path, '{0:05d}'.format(idx) + ".png"))
+        torchvision.utils.save_image(gt, os.path.join(shading_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        break
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     with torch.no_grad():

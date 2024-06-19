@@ -14,6 +14,7 @@ import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
+from utils.shading_utils import shade
 
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
     """
@@ -258,6 +259,9 @@ def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
                 shs = pc.get_bc
             elif data_type == 'normal':
                 shs = pc.get_normal
+            elif data_type == 'shading':
+                shade(viewpoint_camera, pc)
+                shs = pc.shading
     else:
         colors_precomp = override_color
 
