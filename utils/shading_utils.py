@@ -5,7 +5,12 @@ from utils.sh_utils import SH2RGB, RGB2SH
 
 def shade(viewpoint_camera, pc):
 
-    view_pos = torch.from_numpy(viewpoint_camera.T).to(viewpoint_camera.data_device)
+    #view_pos = torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
+    view_pos = torch.from_numpy(viewpoint_camera.camera_position).to(viewpoint_camera.data_device)
+
+    print('viewpoint_camera.camera_center', viewpoint_camera.T)
+    print('viewpoint_camera.camera_center', viewpoint_camera.camera_center)
+    print('viewpoint_camera.camera_position', viewpoint_camera.camera_position)
 
     light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
     light_color = torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32).to(viewpoint_camera.data_device)
@@ -16,7 +21,9 @@ def shade(viewpoint_camera, pc):
     #print('pc.get_bc', pc.get_bc)
     #print('SH2RGB(pc.get_bc)', SH2RGB(pc.get_bc).max(axis=0), SH2RGB(pc.get_bc).min(axis=0), torch.topk(SH2RGB(pc.get_bc), dim=0, k=10))
 
-    base_color = torch.pow(torch.clip(SH2RGB(pc.get_bc), 0, 1), 2.2) # torch.pow(SH2RGB(pc.get_bc), 2.2)
+    base_color = torch.pow(torch.clip(SH2RGB(pc.get_bc), 0), 2.2) # torch.pow(SH2RGB(pc.get_bc), 2.2)
+
+    #print('SH2RGB_shading(base_color)', SH2RGB_shading(base_color), SH2RGB_shading(base_color).shape)
     #print('base_color.shape', base_color.shape, base_color.dtype, torch.isnan(base_color).sum())
     metallic = torch.clip(SH2RGB(pc.get_mro[:, :, 2].unsqueeze(1)), 0, 1)
     roughness = torch.clip(SH2RGB(pc.get_mro[:, :, 1].unsqueeze(1)), 0, 1)
@@ -34,9 +41,9 @@ def shade(viewpoint_camera, pc):
 
     L = normalize(light_pos - frag_pos)
     H = normalize(V + L)
-    distance = torch.linalg.norm(light_pos - frag_pos, dim=1).unsqueeze(1)
+    distance = torch.linalg.norm(light_pos - frag_pos, dim=2).unsqueeze(1)
     attenuation = 1.0 / (distance * distance)
-    radiance = light_color * attenuation
+    radiance = light_color * attenuation * 100
 
     print('radiance.shape', radiance.shape, radiance.dtype, torch.isnan(radiance).sum())
     print('base_color.shape', base_color.shape, base_color.dtype, torch.isnan(base_color).sum())
@@ -103,7 +110,7 @@ def DistributionGGX(N, H, roughness):
     print('NdotH.shape', NdotH.shape, NdotH.dtype, torch.isnan(NdotH).sum())
     print('NdotH2.shape', NdotH2.shape, NdotH2.dtype, torch.isnan(NdotH2).sum())
     print('denom.shape', denom.shape, denom.dtype, torch.isnan(denom).sum())
-    denom = math.pi * denom * denom
+    denom = math.pi * denom * denom + 0.0001
 
     return nom / denom
 

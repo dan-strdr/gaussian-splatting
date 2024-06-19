@@ -39,6 +39,7 @@ class CameraInfo(NamedTuple):
     bc_image: np.array
     mro_image: np.array
     normal_image: np.array
+    camera_position: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -298,14 +299,18 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
             R = np.transpose(w2c[:3,:3])  # R is stored transposed due to 'glm' in CUDA code
             T = w2c[:3, 3]
 
+            camera_position = c2w[:3, 3]
+
             if idx in test_idxs:
                 test_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
+                            camera_position=camera_position))
             else:
                 train_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
-                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image))
+                            projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
+                            camera_position=camera_position))
 
 
     ply_path = os.path.join(storage_path, "points3d.ply")

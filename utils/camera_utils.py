@@ -62,7 +62,7 @@ def loadCam(args, id, cam_info, resolution_scale):
                   image=gt_image, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device,
                   projection_matrix=cam_info.projection_matrix, bc_image=bc_image, 
-                  mro_image=mro_image, normal_image=normal_image)
+                  mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
