@@ -12,7 +12,8 @@ def shade(viewpoint_camera, pc):
     print('viewpoint_camera.camera_center', viewpoint_camera.camera_center)
     print('viewpoint_camera.camera_position', viewpoint_camera.camera_position)
 
-    light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+    #light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+    light_pos = torch.tensor([0, -0.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
     light_color = torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32).to(viewpoint_camera.data_device)
 
     frag_pos = pc.get_xyz.unsqueeze(1)
@@ -27,7 +28,7 @@ def shade(viewpoint_camera, pc):
     #print('base_color.shape', base_color.shape, base_color.dtype, torch.isnan(base_color).sum())
     metallic = torch.clip(SH2RGB(pc.get_mro[:, :, 2].unsqueeze(1)), 0, 1)
     roughness = torch.clip(SH2RGB(pc.get_mro[:, :, 1].unsqueeze(1)), 0, 1)
-    #ao = pc.get_mro[:, :, 0].unsqueeze(1)
+    ao = torch.clip(SH2RGB(pc.get_mro[:, :, 0].unsqueeze(1)), 0, 1)
 
     N = torch.clip(SH2RGB(pc.get_normal), 0, 1)
     N = N*2-1
@@ -49,7 +50,10 @@ def shade(viewpoint_camera, pc):
     H = normalize(V + L, dim=2)
     distance = torch.linalg.norm(light_pos - frag_pos, dim=2).unsqueeze(1)
     attenuation = 1.0 / (distance * distance)
-    radiance = light_color * attenuation * 100
+    radiance = light_color * attenuation * 10
+
+    print('L:', L)
+    print('H:', H)
 
     print('radiance.shape', radiance.shape, radiance.dtype, torch.isnan(radiance).sum())
     print('base_color.shape', base_color.shape, base_color.dtype, torch.isnan(base_color).sum())
@@ -90,7 +94,7 @@ def shade(viewpoint_camera, pc):
 
     Lo += (kD * base_color / math.pi + specular) * radiance * NdotL
     
-    ambient = 0.3 * base_color  # * ao
+    ambient = 0.3 * base_color  * ao
     
     color = ambient + Lo
 
