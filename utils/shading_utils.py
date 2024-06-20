@@ -3,12 +3,15 @@ from torch.nn.functional import normalize
 import math
 from utils.sh_utils import SH2RGB, RGB2SH
 
-def shade(viewpoint_camera, pc):
+def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
 
     view_pos = torch.from_numpy(viewpoint_camera.camera_position).to(viewpoint_camera.data_device)
 
-    light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+    if light_pos is None:
+        light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
     light_color = torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32).to(viewpoint_camera.data_device)
+    if lighting_optimization is not None:
+        light_color = light_color.requires_grad_(True)
 
     frag_pos = pc.get_xyz.unsqueeze(1)
 
@@ -24,9 +27,13 @@ def shade(viewpoint_camera, pc):
     V = normalize(view_pos-frag_pos, dim=2)
 
     F0 = torch.tensor(0.04, dtype=torch.float32).to(viewpoint_camera.data_device)
+    if lighting_optimization is not None:
+        F0 = F0.requires_grad_(True)
     F0 = F0*(1-metallic)+base_color*metallic
 
     Lo = torch.zeros_like(base_color)
+    if lighting_optimization is not None:
+        Lo = Lo.requires_grad_(True)
 
 
     L = normalize(light_pos - frag_pos, dim=2)
@@ -51,7 +58,7 @@ def shade(viewpoint_camera, pc):
 
     NdotL = torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0)     
 
-    Lo += (kD * base_color / math.pi + specular) * radiance * NdotL
+    Lo = Lo + (kD * base_color / math.pi + specular) * radiance * NdotL
     
     ambient = 0.3 * base_color  * ao
     
@@ -59,7 +66,7 @@ def shade(viewpoint_camera, pc):
 
     color = color / (color + 1)
 
-    frag_color = torch.pow(color, 1.0/2.2) # torch.pow(color, 1.0/2.2)
+    frag_color = torch.pow(color+0.0001, 1.0/2.2) # torch.pow(color, 1.0/2.2)
 
     pc.shading = RGB2SH(frag_color)
 
