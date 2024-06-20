@@ -20,6 +20,7 @@ from utils.general_utils import safe_state
 from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from gaussian_renderer import GaussianModel
+from time import time
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
     render_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "render")
@@ -54,30 +55,48 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
 
+        t1 = time()
+
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'render')["render"]
         gt = view.original_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(render_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(render_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        t2 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'met_rough_occ')["render"]
         gt = view.mro_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(met_rough_occ_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(met_rough_occ_gts_path, '{0:05d}'.format(idx) + ".png"))
 
+        t3 = time()
+
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'base_color')["render"]
         gt = view.bc_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(base_color_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(base_color_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        t4 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'normal')["render"]
         gt = view.normal_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(normal_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(normal_gts_path, '{0:05d}'.format(idx) + ".png"))
 
+        t5 = time()
+
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'shading')["render"]
         gt = view.original_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(shading_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(shading_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        t6 = time()
+
+        #print('render time:', t2-t1)
+        #print('met_rough_occ time:', t3-t2)
+        #print('base_color time:', t4-t3)
+        #print('normal time:', t5-t4)
+        #print('shading time:', t6-t5)
 
         #break
 
