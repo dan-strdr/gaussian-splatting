@@ -9,3 +9,4 @@ screenshots
 *.sbatch
 data/*
 logs/*
+normal_corrected/*

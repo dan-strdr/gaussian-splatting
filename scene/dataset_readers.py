@@ -88,6 +88,8 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
 
+        #T += 0.5
+
         if intr.model=="SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
@@ -100,12 +102,23 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
-        image_path = os.path.join(images_folder, os.path.basename(extr.name))
+        image_path = os.path.join(images_folder, 'images', os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
         image = Image.open(image_path)
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
+        bc_image_path = os.path.join(images_folder, 'base_color', os.path.basename(extr.name))
+        bc_image = Image.open(bc_image_path)
+
+        mro_image_path = os.path.join(images_folder, 'met_rough_occ', os.path.basename(extr.name))
+        mro_image = Image.open(mro_image_path)
+
+        normal_image_path = os.path.join(images_folder, 'normal', os.path.basename(extr.name))
+        normal_image = Image.open(normal_image_path)
+
+        cam_info =  CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
+                              image_path=image_path, image_name=image_name, width=width, height=height,
+                            projection_matrix=None, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
+                            camera_position=None)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
@@ -146,9 +159,9 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
-
-    reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+    #print(cam_extrinsics)
+    #reading_dir = "images" if images == None else images
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=path)
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
     if eval:

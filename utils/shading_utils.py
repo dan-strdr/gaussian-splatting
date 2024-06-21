@@ -5,10 +5,13 @@ from utils.sh_utils import SH2RGB, RGB2SH
 
 def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
 
-    view_pos = torch.from_numpy(viewpoint_camera.camera_position).to(viewpoint_camera.data_device)
+    view_pos = viewpoint_camera.camera_center # torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
+
+    radiance_multiplier = 100
 
     if light_pos is None:
-        light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+        light_pos = torch.tensor([-2.8, 0.5, 8.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+        #light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
     light_color = torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32).to(viewpoint_camera.data_device)
     if lighting_optimization is not None:
         light_color = light_color.requires_grad_(True)
@@ -17,9 +20,12 @@ def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
 
     base_color = torch.pow(torch.clip(SH2RGB(pc.get_bc), 0, 1), 2.2) 
 
-    metallic = torch.clip(SH2RGB(pc.get_mro[:, :, 2].unsqueeze(1)), 0, 1)
-    roughness = torch.clip(SH2RGB(pc.get_mro[:, :, 1].unsqueeze(1)), 0, 1)
-    ao = torch.clip(SH2RGB(pc.get_mro[:, :, 0].unsqueeze(1)), 0, 1)
+    #metallic = torch.clip(SH2RGB(pc.get_mro[:, :, 2].unsqueeze(1)), 0, 1)
+    #roughness = torch.clip(SH2RGB(pc.get_mro[:, :, 1].unsqueeze(1)), 0, 1)
+
+    metallic = torch.clip(SH2RGB(pc.get_mro[:, :, 1].unsqueeze(1)), 0, 1)
+    roughness = torch.clip(SH2RGB(pc.get_mro[:, :, 0].unsqueeze(1)), 0, 1)
+    #ao = torch.clip(SH2RGB(pc.get_mro[:, :, 0].unsqueeze(1)), 0, 1)
 
     N = torch.clip(SH2RGB(pc.get_normal), 0, 1)
     N = N*2-1
@@ -40,7 +46,7 @@ def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
     H = normalize(V + L, dim=2)
     distance = torch.linalg.norm(light_pos - frag_pos, dim=2).unsqueeze(1)
     attenuation = 1.0 / (distance * distance)
-    radiance = light_color * attenuation
+    radiance = light_color * attenuation * radiance_multiplier
 
     NDF = DistributionGGX(N, H, roughness)
     G   = GeometrySmith(N, V, L, roughness)
@@ -60,7 +66,7 @@ def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
 
     Lo = Lo + (kD * base_color / math.pi + specular) * radiance * NdotL
     
-    ambient = 0.3 * base_color  * ao
+    ambient = 0.3 * base_color  #* ao
     
     color = ambient + Lo
 

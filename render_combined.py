@@ -23,6 +23,9 @@ from gaussian_renderer import GaussianModel
 from time import time
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
+
+    shading_folder_name = 'shading_white_100'
+
     render_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "render")
     render_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "render")
 
@@ -35,7 +38,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     normal_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "normal")
     normal_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "normal")
 
-    shading_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "shading")
+    shading_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", shading_folder_name)
     shading_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "shading")
 
     makedirs(render_render_path, exist_ok=True)
