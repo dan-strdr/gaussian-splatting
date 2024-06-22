@@ -27,16 +27,27 @@ from utils.loss_utils import l1_loss, ssim
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background, scene):
 
-    viewpoint_stack = None
+    output_path = 'lighting_results'
+    os.makedirs(output_path, exist_ok=True)
 
-    light_pos_tensor = torch.tensor([1, 0.8, 0.6], dtype=torch.float32).to('cuda')
+    viewpoint_stack = None
+    nof_lights = 50
+
+    #light_pos_tensor = torch.tensor([1, 0.8, 0.6], dtype=torch.float32).to('cuda')
+    light_pos_tensor = (torch.rand(nof_lights, 3, dtype=torch.float32)*torch.tensor([20.0, 8.0, 18.0])+torch.tensor([-12.0, -2.0, -1.0])).to('cuda')
+
     light_pos = torch.nn.Parameter(light_pos_tensor.requires_grad_(True))
 
-    optimizer = torch.optim.Adam([light_pos], lr=0.01, eps=1e-15)
+    #light_color_tensor = torch.tensor([1, 0.8, 0.6], dtype=torch.float32).to('cuda')
+    light_color_tensor = torch.rand(nof_lights, 3, dtype=torch.float32).to('cuda')
+
+    light_color = torch.nn.Parameter(light_color_tensor.requires_grad_(True))
+
+    optimizer = torch.optim.Adam([light_pos, light_color], lr=0.01, eps=1e-15)
 
     for iteration in range(1000): 
         if iteration == 500:
-            optimizer.param_groups[0]['lr'] = 0.001
+            optimizer.param_groups[0]['lr'] = 0.002
 
         # Pick a random Camera
         if not viewpoint_stack:
@@ -45,7 +56,10 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
         render = render_combined(viewpoint_cam, gaussians, pipeline, background, data_type = 'render')["render"]
 
-        shading = render_combined(viewpoint_cam, gaussians, pipeline, background, data_type = 'shading', light_pos = light_pos, lighting_optimization = True)["render"]
+        shading = render_combined(viewpoint_cam, gaussians, pipeline, background, data_type = 'shading', light_pos = light_pos, light_color = light_color, lighting_optimization = True)["render"]
+
+        #if iteration == 0: # iteration%10==0:
+        #    torchvision.utils.save_image(shading, os.path.join(output_path, '{0:05d}'.format(iteration) + ".png"))
 
         Ll1 = l1_loss(shading, render)
         loss = (1.0 - 0.2) * Ll1 + 0.2 * (1.0 - ssim(shading, render))
@@ -62,7 +76,12 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
         optimizer.step()
 
-        print('light_pos:', light_pos.data)
+        if viewpoint_cam.image_name== 'sample_0': # iteration%10==0:
+            torchvision.utils.save_image(shading, os.path.join(output_path, '{0:05d}'.format(iteration) + ".png"))
+
+
+        #print('light_pos:', light_pos.data)
+        #print('light_color:', light_color.data)
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     gaussians = GaussianModel(dataset.sh_degree)

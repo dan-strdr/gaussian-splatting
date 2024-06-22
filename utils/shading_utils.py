@@ -3,18 +3,26 @@ from torch.nn.functional import normalize
 import math
 from utils.sh_utils import SH2RGB, RGB2SH
 
-def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
+def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_optimization = None):
 
     view_pos = viewpoint_camera.camera_center # torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
 
-    radiance_multiplier = 100
+    radiance_multiplier = 50
+    nof_lights = 500
 
     if light_pos is None:
-        light_pos = torch.tensor([-2.8, 0.5, 8.1], dtype=torch.float32).to(viewpoint_camera.data_device)
+        light_pos = torch.rand(nof_lights, 3, dtype=torch.float32)*torch.tensor([20.0, 8.0, 18.0])+torch.tensor([-12.0, -2.0, -1.0])
+        light_pos = light_pos.to(viewpoint_camera.data_device)
+        #light_pos = torch.tensor([[-7.0, 2.4, 5.5]], dtype=torch.float32).to(viewpoint_camera.data_device) # left
+        #light_pos = torch.tensor([-2.8, 5.0, 8.1], dtype=torch.float32).to(viewpoint_camera.data_device) down
+        #light_pos = torch.tensor([-2.8, 0.5, 8.1], dtype=torch.float32).to(viewpoint_camera.data_device) up
         #light_pos = torch.tensor([0, 1.5, 0.1], dtype=torch.float32).to(viewpoint_camera.data_device)
-    light_color = torch.tensor([1.0, 1.0, 1.0], dtype=torch.float32).to(viewpoint_camera.data_device)
-    if lighting_optimization is not None:
-        light_color = light_color.requires_grad_(True)
+    #light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
+    if light_color is None:
+        light_color = torch.rand(nof_lights, 3, dtype=torch.float32).to(viewpoint_camera.data_device)
+
+    #if lighting_optimization is not None:
+    #    light_color = light_color.requires_grad_(True)
 
     frag_pos = pc.get_xyz.unsqueeze(1)
 
@@ -41,32 +49,32 @@ def shade(viewpoint_camera, pc, light_pos = None, lighting_optimization = None):
     if lighting_optimization is not None:
         Lo = Lo.requires_grad_(True)
 
+    for i in range(light_pos.shape[0]):
+        L = normalize(light_pos[i] - frag_pos, dim=2)
+        H = normalize(V + L, dim=2)
+        distance = torch.linalg.norm(light_pos[i] - frag_pos, dim=2).unsqueeze(1)
+        attenuation = 1.0 / (distance * distance)
+        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier * (distance<6).to(torch.float32) #* (distance<1.5).to(torch.float32)
 
-    L = normalize(light_pos - frag_pos, dim=2)
-    H = normalize(V + L, dim=2)
-    distance = torch.linalg.norm(light_pos - frag_pos, dim=2).unsqueeze(1)
-    attenuation = 1.0 / (distance * distance)
-    radiance = light_color * attenuation * radiance_multiplier
+        NDF = DistributionGGX(N, H, roughness)
+        G   = GeometrySmith(N, V, L, roughness)
+        F = fresnelSchlick(torch.clip(torch.sum(H*V, axis=2).unsqueeze(2), min=0.0), F0)
 
-    NDF = DistributionGGX(N, H, roughness)
-    G   = GeometrySmith(N, V, L, roughness)
-    F = fresnelSchlick(torch.clip(torch.sum(H*V, axis=2).unsqueeze(2), min=0.0), F0)
+        numerator    = NDF * G * F
+        denominator = 4.0 * torch.clip(torch.sum(N*V, axis=2).unsqueeze(2), min=0.0) * torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0) + 0.0001
+        specular = numerator / denominator
+        
+        kS = F
 
-    numerator    = NDF * G * F
-    denominator = 4.0 * torch.clip(torch.sum(N*V, axis=2).unsqueeze(2), min=0.0) * torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0) + 0.0001
-    specular = numerator / denominator
+        kD = 1 - kS
+
+        kD *= 1.0 - metallic  
+
+        NdotL = torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0)     
+
+        Lo = Lo + (kD * base_color / math.pi + specular) * radiance * NdotL
     
-    kS = F
-
-    kD = 1 - kS
-
-    kD *= 1.0 - metallic  
-
-    NdotL = torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0)     
-
-    Lo = Lo + (kD * base_color / math.pi + specular) * radiance * NdotL
-    
-    ambient = 0.3 * base_color  #* ao
+    ambient = 0.1 * base_color  #* ao
     
     color = ambient + Lo
 

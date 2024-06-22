@@ -185,7 +185,7 @@ def render_mro(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tens
             "visibility_filter" : radii > 0,
             "radii": radii}
 
-def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, data_type = 'render', light_pos = None, lighting_optimization = None):
+def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, data_type = 'render', light_pos = None, light_color = None, lighting_optimization = None):
     """
     Render the scene. 
     
@@ -260,7 +260,7 @@ def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
             elif data_type == 'normal':
                 shs = pc.get_normal
             elif data_type == 'shading':
-                shade(viewpoint_camera, pc, light_pos, lighting_optimization)
+                shade(viewpoint_camera, pc, light_pos, light_color, lighting_optimization)
                 shs = pc.shading
     else:
         colors_precomp = override_color
