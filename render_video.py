@@ -27,10 +27,11 @@ import numpy as np
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    base_color_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "base_color_video")
+    data_type = 'render'
 
+    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", f"{data_type}_video")
 
-    makedirs(base_color_render_path, exist_ok=True)
+    makedirs(render_path, exist_ok=True)
 
     idx = 0
     for i in tqdm(range(len(views)-1), desc='Rendering progress'):
@@ -45,8 +46,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
                         image_name=view1.image_name, uid=view1.uid,
                         trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda")
 
-            rendering = render_combined(view3, gaussians, pipeline, background, data_type = 'base_color')["render"]
-            torchvision.utils.save_image(rendering, os.path.join(base_color_render_path, '{0:05d}'.format(idx) + ".png"))
+            rendering = render_combined(view3, gaussians, pipeline, background, data_type = data_type)["render"]
+            torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
             idx += 1
 
 

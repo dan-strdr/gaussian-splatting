@@ -4,7 +4,7 @@ import os
 import numpy as np
 from PIL import Image
 
-path = '/usr/stud/kocu/storage/user/workspace/trial/abo/gaussian_splatting_our/gaussian-splatting/data/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples'
+path = '/usr/stud/kocu/storage/user/workspace/trial/abo/gaussian_splatting_our/gaussian-splatting/data/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_normal_corrected_diffusion'
 cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
 
 cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
