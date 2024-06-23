@@ -5,10 +5,12 @@ from utils.sh_utils import SH2RGB, RGB2SH
 
 def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_optimization = None):
 
+    torch.manual_seed(7)
+
     view_pos = viewpoint_camera.camera_center # torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
 
-    radiance_multiplier = 50
-    nof_lights = 500
+    radiance_multiplier = 10
+    nof_lights = 200
 
     if light_pos is None:
         light_pos = torch.rand(nof_lights, 3, dtype=torch.float32)*torch.tensor([20.0, 8.0, 18.0])+torch.tensor([-12.0, -2.0, -1.0])
@@ -54,7 +56,7 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
         H = normalize(V + L, dim=2)
         distance = torch.linalg.norm(light_pos[i] - frag_pos, dim=2).unsqueeze(1)
         attenuation = 1.0 / (distance * distance)
-        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier * (distance<6).to(torch.float32) #* (distance<1.5).to(torch.float32)
+        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier * (distance<2).to(torch.float32) #* (distance<1.5).to(torch.float32)
 
         NDF = DistributionGGX(N, H, roughness)
         G   = GeometrySmith(N, V, L, roughness)
