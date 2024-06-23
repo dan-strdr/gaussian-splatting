@@ -23,11 +23,12 @@ from gaussian_renderer import GaussianModel
 from time import time
 from scene.cameras import Camera
 import numpy as np
+from scene.colmap_loader import rotmat2qvec, qvec2rotmat
 
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    data_type = 'render'
+    data_type = 'base_color'
 
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", f"{data_type}_video")
 
@@ -40,7 +41,15 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         for alpha in np.arange(0, 1.01, 0.03):
 
             T = (1-alpha)*view1.T + alpha*view2.T
-            R = (1-alpha)*view1.R + alpha*view2.R
+            #R = (1-alpha)*view1.R + alpha*view2.R
+
+            q1 = rotmat2qvec(view1.R)
+            q2 = rotmat2qvec(view2.R)
+
+            theta = np.arccos(np.dot(q1, q2))
+
+            q3 = (np.sin((1-alpha)*theta)/np.sin(theta))*q1 + (np.sin(alpha*theta)/np.sin(theta))*q2
+            R = qvec2rotmat(q3)
 
             view3 = Camera(0, R, T, view1.FoVx, view1.FoVy, view1.original_image, gt_alpha_mask=None,
                         image_name=view1.image_name, uid=view1.uid,
@@ -49,6 +58,10 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
             rendering = render_combined(view3, gaussians, pipeline, background, data_type = data_type)["render"]
             torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
             idx += 1
+
+            #break
+            
+        #break
 
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
