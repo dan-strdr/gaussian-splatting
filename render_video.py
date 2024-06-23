@@ -29,7 +29,7 @@ from scene.colmap_loader import rotmat2qvec, qvec2rotmat
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
     data_type = 'shading'
-    data_type_folder_name = 'shading_light_200_radiance_10_radius_2'
+    data_type_folder_name = 'shading_light_1_radiance_500_radius_inf_white'
 
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", f"{data_type_folder_name}_video")
 
