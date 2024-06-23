@@ -24,45 +24,68 @@ from time import time
 from scene.cameras import Camera
 import numpy as np
 from scene.colmap_loader import rotmat2qvec, qvec2rotmat
+import cv2
 
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    data_type = 'shading'
-    data_type_folder_name = 'shading_light_1_radiance_500_radius_inf_white'
+    data_types = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading']
+    data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading_light_200_radiance_30_radius_2']
+    suffix = 'diffusion2'
 
-    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", f"{data_type_folder_name}_video")
+    makedirs('videos', exist_ok=True)
+    
+    for data_type_idx, data_type in enumerate(data_types):
+        #data_type = 'shading'
+        #data_type_folder_name = 'shading_light_1_radiance_500_radius_inf_white'
+        data_type_folder_name = data_type_folder_names[data_type_idx]
 
-    makedirs(render_path, exist_ok=True)
+        render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", f"{data_type_folder_name}_video")
 
-    idx = 0
-    for i in tqdm(range(len(views)-1), desc='Rendering progress'):
-        view1 = views[i]
-        view2 = views[i+1]
-        for alpha in np.arange(0, 1.01, 0.03):
+        makedirs(render_path, exist_ok=True)
 
-            T = (1-alpha)*view1.T + alpha*view2.T
-            #R = (1-alpha)*view1.R + alpha*view2.R
+        idx = 0
+        for i in tqdm(range(len(views)-1), desc=f'Rendering progress for {data_type}'):
+            view1 = views[i]
+            view2 = views[i+1]
+            for alpha in np.arange(0, 1.01, 0.03):
 
-            q1 = rotmat2qvec(view1.R)
-            q2 = rotmat2qvec(view2.R)
+                T = (1-alpha)*view1.T + alpha*view2.T
+                #R = (1-alpha)*view1.R + alpha*view2.R
 
-            theta = np.arccos(np.dot(q1, q2))
+                q1 = rotmat2qvec(view1.R)
+                q2 = rotmat2qvec(view2.R)
 
-            q3 = (np.sin((1-alpha)*theta)/np.sin(theta))*q1 + (np.sin(alpha*theta)/np.sin(theta))*q2
-            R = qvec2rotmat(q3)
+                theta = np.arccos(np.dot(q1, q2))
 
-            view3 = Camera(0, R, T, view1.FoVx, view1.FoVy, view1.original_image, gt_alpha_mask=None,
-                        image_name=view1.image_name, uid=view1.uid,
-                        trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda")
+                q3 = (np.sin((1-alpha)*theta)/np.sin(theta))*q1 + (np.sin(alpha*theta)/np.sin(theta))*q2
+                R = qvec2rotmat(q3)
 
-            rendering = render_combined(view3, gaussians, pipeline, background, data_type = data_type)["render"]
-            torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
-            idx += 1
+                view3 = Camera(0, R, T, view1.FoVx, view1.FoVy, view1.original_image, gt_alpha_mask=None,
+                            image_name=view1.image_name, uid=view1.uid,
+                            trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda")
 
+                rendering = render_combined(view3, gaussians, pipeline, background, data_type = data_type)["render"]
+                torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
+                idx += 1
+
+                #break
+                
             #break
-            
-        #break
+        
+        video_name = os.path.join('videos', f'{data_type_folder_name}_{suffix}_video.avi')
+
+        images = [img for img in sorted(os.listdir(render_path)) if img.endswith(".png")]
+        frame = cv2.imread(os.path.join(render_path, images[0]))
+        height, width, layers = frame.shape
+
+        video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'MJPG'), 10, (width,height))
+
+        for image in images:
+            video.write(cv2.imread(os.path.join(render_path, image)))
+
+        cv2.destroyAllWindows()
+        video.release()
 
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):

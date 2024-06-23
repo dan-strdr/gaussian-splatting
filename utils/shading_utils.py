@@ -9,20 +9,26 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
 
     view_pos = viewpoint_camera.camera_center # torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
 
-    radiance_multiplier = 500
+    radiance_multiplier = 30
     nof_lights = 200
 
+    upper_coordinates = torch.quantile(pc.get_xyz, 0.95, dim=0)
+    lower_coordinates = torch.quantile(pc.get_xyz, 0.05, dim=0)
+
+
     if light_pos is None:
+        light_pos = torch.rand(nof_lights, 3, dtype=torch.float32)*torch.tensor([upper_coordinates[0].item()-lower_coordinates[0].item(), upper_coordinates[1].item()-lower_coordinates[1].item(), upper_coordinates[2].item()-lower_coordinates[2].item()])+torch.tensor([lower_coordinates[0].item(), lower_coordinates[1].item(), lower_coordinates[2].item()])
+        light_pos = light_pos.to(viewpoint_camera.data_device)
         #light_pos = torch.rand(nof_lights, 3, dtype=torch.float32)*torch.tensor([20.0, 8.0, 18.0])+torch.tensor([-12.0, -2.0, -1.0])
         #light_pos = light_pos.to(viewpoint_camera.data_device)
         #light_pos = torch.tensor([[-7.0, 2.4, 5.5]], dtype=torch.float32).to(viewpoint_camera.data_device) # left
         #light_pos = torch.tensor([[-2.8, 5.0, 8.1]], dtype=torch.float32).to(viewpoint_camera.data_device) #down
-        light_pos = torch.tensor([[-2.8, 0.5, 8.1]], dtype=torch.float32).to(viewpoint_camera.data_device) #up
+        #light_pos = torch.tensor([[-2.8, 0.5, 8.1]], dtype=torch.float32).to(viewpoint_camera.data_device) #up
         #light_pos = torch.tensor([[0, 1.5, 0.1]], dtype=torch.float32).to(viewpoint_camera.data_device)
     #light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
     if light_color is None:
-        #light_color = torch.rand(nof_lights, 3, dtype=torch.float32).to(viewpoint_camera.data_device)
-        light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
+        light_color = torch.rand(nof_lights, 3, dtype=torch.float32).to(viewpoint_camera.data_device)
+        #light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
 
     #if lighting_optimization is not None:
     #    light_color = light_color.requires_grad_(True)
@@ -57,7 +63,7 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
         H = normalize(V + L, dim=2)
         distance = torch.linalg.norm(light_pos[i] - frag_pos, dim=2).unsqueeze(1)
         attenuation = 1.0 / (distance * distance)
-        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier #* (distance<2).to(torch.float32) #* (distance<1.5).to(torch.float32)
+        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier * (distance<2).to(torch.float32) #* (distance<1.5).to(torch.float32)
 
         NDF = DistributionGGX(N, H, roughness)
         G   = GeometrySmith(N, V, L, roughness)

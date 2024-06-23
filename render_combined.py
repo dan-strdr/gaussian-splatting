@@ -24,7 +24,7 @@ from time import time
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    shading_folder_name = 'shading_uniform_500_light_10'
+    shading_folder_name = 'shading_light_200_radiance_30_radius_2'
 
     render_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "render")
     render_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "render")
