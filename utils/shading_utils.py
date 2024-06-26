@@ -63,7 +63,7 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
         H = normalize(V + L, dim=2)
         distance = torch.linalg.norm(light_pos[i] - frag_pos, dim=2).unsqueeze(1)
         attenuation = 1.0 / (distance * distance)
-        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier * (distance<2).to(torch.float32) #* (distance<1.5).to(torch.float32)
+        radiance = torch.clip(light_color[i], 0, 1) * attenuation * radiance_multiplier #* (distance<2).to(torch.float32) #* (distance<1.5).to(torch.float32)
 
         NDF = DistributionGGX(N, H, roughness)
         G   = GeometrySmith(N, V, L, roughness)
