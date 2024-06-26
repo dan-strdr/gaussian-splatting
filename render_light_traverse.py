@@ -26,8 +26,8 @@ import cv2
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    light_traverse_folder_name = 'light_traverse_green'
-    suffix = 'gt'
+    light_traverse_folder_name = 'light_traverse_white'
+    suffix = 'gt_twostepopt'
 
     frame_number = 20
 
@@ -49,7 +49,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         for alpha in np.linspace(0, 1, frame_number):
             light_coordinates.append((1-alpha)*coordinates[coordinate_id]+ (alpha)*coordinates[coordinate_id+1])
 
-    light_color = torch.tensor([[0.0, 1.0, 0.0]], dtype=torch.float32).to('cuda')
+    light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to('cuda')
 
     light_traverse_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", light_traverse_folder_name)
 

@@ -13,7 +13,7 @@ import os
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, ssim
-from gaussian_renderer import render_mro, network_gui
+from gaussian_renderer import render, network_gui, render_combined
 import sys
 from scene import Scene, GaussianModel
 from utils.general_utils import safe_state
@@ -36,16 +36,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
-        gaussians.restore(model_params, opt)
-        #gaussians._mro = torch.clone(gaussians._features_dc).detach()
-        gaussians._xyz.requires_grad = False
-        gaussians._features_dc.requires_grad = False
-        gaussians._features_rest.requires_grad = False
-        gaussians._mro.requires_grad = True
-        gaussians._scaling.requires_grad = False
-        gaussians._rotation.requires_grad = False
-        gaussians._opacity.requires_grad = False
-
+        gaussians.restore_second(model_params, opt)
     first_iter = 0
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
@@ -66,7 +57,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 net_image_bytes = None
                 custom_cam, do_training, pipe.convert_SHs_python, pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
                 if custom_cam != None:
-                    net_image = render_mro(custom_cam, gaussians, pipe, background, scaling_modifer)["render"]
+                    net_image = render(custom_cam, gaussians, pipe, background, scaling_modifer)["render"]
                     net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
                 network_gui.send(net_image_bytes, dataset.source_path)
                 if do_training and ((iteration < int(opt.iterations)) or not keep_alive):
@@ -78,11 +69,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         gaussians.update_learning_rate(iteration)
 
-        """
-        # Every 1000 its we increase the levels of SH up to a maximum degree
-        if iteration % 1000 == 0:
-            gaussians.oneupSHdegree()
-        """
         # Pick a random Camera
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
@@ -94,13 +80,33 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         bg = torch.rand((3), device="cuda") if opt.random_background else background
 
-        render_pkg = render_mro(viewpoint_cam, gaussians, pipe, bg)
-        image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
+        # met_rough_occ
+        met_rough_occ_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'met_rough_occ')
+        met_rough_occ_image = met_rough_occ_render_pkg["render"]
 
         # Loss
-        gt_image = viewpoint_cam.mro_image.cuda()
-        Ll1 = l1_loss(image, gt_image)
-        loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+        met_rough_occ_gt_image = viewpoint_cam.mro_image.cuda()
+        Ll1 = l1_loss(met_rough_occ_image, met_rough_occ_gt_image)
+        loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image))
+
+        # base_color
+        base_color_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'base_color')
+        base_color_image = base_color_render_pkg["render"]
+
+        # Loss
+        base_color_gt_image = viewpoint_cam.bc_image.cuda()
+        Ll1 = l1_loss(base_color_image, base_color_gt_image)
+        loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image))
+
+        # normal
+        normal_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'normal')
+        normal_image = normal_render_pkg["render"]
+
+        # Loss
+        normal_gt_image = viewpoint_cam.normal_image.cuda()
+        Ll1 = l1_loss(normal_image, normal_gt_image)
+        loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
+
         loss.backward()
 
         iter_end.record()
@@ -115,24 +121,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 progress_bar.close()
 
             # Log and save
-            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render_mro, (pipe, background))
+            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render_combined, (pipe, background))
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
-            """
-            # Densification
-            if iteration < opt.densify_until_iter:
-                # Keep track of max radii in image-space for pruning
-                gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
-                gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
-                    size_threshold = 20 if iteration > opt.opacity_reset_interval else None
-                    gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold)
-                
-                if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-                    gaussians.reset_opacity()
-            """
             # Optimizer step
             if iteration < opt.iterations:
                 gaussians.optimizer.step()
@@ -182,7 +175,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 psnr_test = 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
-                    gt_image = torch.clamp(viewpoint.mro_image.to("cuda"), 0.0, 1.0)
+                    gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
                     if tb_writer and (idx < 5):
                         tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
                         if iteration == testing_iterations[0]:
@@ -191,10 +184,48 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     psnr_test += psnr(image, gt_image).mean().double()
                 psnr_test /= len(config['cameras'])
                 l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {}: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
+                print("\n[ITER {}] Evaluating {} render: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
                 if tb_writer:
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
+                
+                met_rough_occ_l1_test = 0.0
+                met_rough_occ_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    met_rough_occ_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'met_rough_occ')["render"], 0.0, 1.0)
+                    met_rough_occ_gt_image = torch.clamp(viewpoint.mro_image.to("cuda"), 0.0, 1.0)
+                    
+                    met_rough_occ_l1_test += l1_loss(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                    met_rough_occ_psnr_test += psnr(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                met_rough_occ_psnr_test /= len(config['cameras'])
+                met_rough_occ_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} met_rough_occ: L1 {} PSNR {}".format(iteration, config['name'], met_rough_occ_l1_test, met_rough_occ_psnr_test))
+
+
+                base_color_l1_test = 0.0
+                base_color_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    base_color_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'base_color')["render"], 0.0, 1.0)
+                    base_color_gt_image = torch.clamp(viewpoint.bc_image.to("cuda"), 0.0, 1.0)
+                    
+                    base_color_l1_test += l1_loss(base_color_image, base_color_gt_image).mean().double()
+                    base_color_psnr_test += psnr(base_color_image, base_color_gt_image).mean().double()
+                base_color_psnr_test /= len(config['cameras'])
+                base_color_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} base_color: L1 {} PSNR {}".format(iteration, config['name'], base_color_l1_test, base_color_psnr_test))
+
+
+                normal_l1_test = 0.0
+                normal_psnr_test = 0.0
+                for idx, viewpoint in enumerate(config['cameras']):
+                    normal_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'normal')["render"], 0.0, 1.0)
+                    normal_gt_image = torch.clamp(viewpoint.normal_image.to("cuda"), 0.0, 1.0)
+                    
+                    normal_l1_test += l1_loss(normal_image, normal_gt_image).mean().double()
+                    normal_psnr_test += psnr(normal_image, normal_gt_image).mean().double()
+                normal_psnr_test /= len(config['cameras'])
+                normal_l1_test /= len(config['cameras'])          
+                print("\n[ITER {}] Evaluating {} normal: L1 {} PSNR {}".format(iteration, config['name'], normal_l1_test, normal_psnr_test))
 
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
