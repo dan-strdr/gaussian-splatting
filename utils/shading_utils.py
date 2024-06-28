@@ -28,6 +28,8 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
     #light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
     if light_color is None:
         light_color = torch.rand(nof_lights, 3, dtype=torch.float32).to(viewpoint_camera.data_device)
+        #light_color = torch.ones(nof_lights, 3, dtype=torch.float32).to(viewpoint_camera.data_device)
+        #light_color -= torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
         #light_color = torch.tensor([[1.0, 1.0, 1.0]], dtype=torch.float32).to(viewpoint_camera.data_device)
 
     #if lighting_optimization is not None:
@@ -82,6 +84,8 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
         NdotL = torch.clip(torch.sum(N*L, axis=2).unsqueeze(2), min=0.0)     
 
         Lo = Lo + (kD * base_color / math.pi + specular) * radiance * NdotL
+
+        #Lo = Lo + (specular) * radiance * NdotL
     
     ambient = 0.1 * base_color  #* ao
     
