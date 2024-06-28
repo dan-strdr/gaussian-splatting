@@ -17,6 +17,7 @@ from scene.dataset_readers import sceneLoadTypeCallbacks
 from scene.gaussian_model import GaussianModel
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
+import torch
 
 class Scene:
 
@@ -75,6 +76,12 @@ class Scene:
             self.train_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.train_cameras, resolution_scale, args)
             print("Loading Test Cameras")
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
+
+        data_types = ['bc_image_mask', 'mro_image_mask', 'normal_image_mask']
+        l = [{'params': [getattr(current_camera, data_type)], 'lr': 0.001, "name": data_type} 
+        for data_type in data_types for current_camera in self.train_cameras[1.0]]
+
+        self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
 
         if self.loaded_iter:
             self.gaussians.load_ply(os.path.join(self.model_path,
