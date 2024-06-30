@@ -26,8 +26,10 @@ import cv2
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
+    makedirs('videos', exist_ok=True)
+
     light_traverse_folder_name = 'light_traverse_white'
-    suffix = 'gt_twostepopt'
+    suffix = 'diffusion_regularized'
 
     frame_number = 20
 

@@ -78,7 +78,7 @@ class Scene:
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
 
         data_types = ['bc_image_mask', 'mro_image_mask', 'normal_image_mask']
-        l = [{'params': [getattr(current_camera, data_type)], 'lr': 0.001, "name": data_type} 
+        l = [{'params': [getattr(current_camera, data_type)], 'lr': 0.01, "name": data_type} 
         for data_type in data_types for current_camera in self.train_cameras[1.0]]
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)

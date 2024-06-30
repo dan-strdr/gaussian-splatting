@@ -31,7 +31,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     data_types = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading']
     data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading_light_200_radiance_30_radius_2']
-    suffix = 'diffusion_twostepopt'
+    suffix = 'diffusion_regularized'
 
     makedirs('videos', exist_ok=True)
     

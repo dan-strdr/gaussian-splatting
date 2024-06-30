@@ -7,7 +7,7 @@ def smooth(y, box_pts):
     y_smooth = np.convolve(y, box, mode='same')
     return y_smooth
 
-log_path = 'logs/training-1222725.out'
+log_path = 'logs/training-1225375.out'
 
 with open(log_path) as log_file:
     data_lines = log_file.readlines()
@@ -25,4 +25,4 @@ iterations = np.linspace(0, 30000, len(loss_values))
 
 df = pd.DataFrame(data={'Iteration': iterations, 'Loss': loss_values})
 fig = px.line(df, x="Iteration", y="Loss", title='Combined Loss Value over Optimization')
-fig.write_image("loss_curve_diffusion.jpg")
+fig.write_image("loss_curve_diffusion_regularized.jpg")
