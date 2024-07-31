@@ -13,3 +13,4 @@ normal_corrected/*
 *.avi
 *.mp4
 image_logs/*
+submodules/*

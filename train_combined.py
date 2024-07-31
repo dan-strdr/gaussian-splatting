@@ -45,12 +45,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     os.makedirs(os.path.join(image_log_folder, normal_folder), exist_ok=True)
 
     mask_coef = 60/255
-    regularization_start_iteration = 1500
+    regularization_start_iteration = 30100 # 1500
 
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree)
     scene = Scene(dataset, gaussians)
+    scene.gaussians.load_ply_original("/home/meric/umut/gaussian-splatting/data/sugarfine_3Dgs7000_sdfestim02_sdfnorm02_level03_decim1000000_normalconsistency01_gaussperface1.ply")
+    gaussians = scene.gaussians
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
@@ -66,7 +68,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     ema_loss_for_log = 0.0
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
-    for iteration in range(first_iter, opt.iterations + 1):        
+    for iteration in range(first_iter, opt.iterations + 1):     
         if network_gui.conn == None:
             network_gui.try_connect()
         while network_gui.conn != None:
@@ -209,6 +211,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
 
+            """
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
@@ -221,9 +224,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
-
+            """
             # Optimizer step
             if iteration < opt.iterations:
+                gaussians.get_xyz.grad = None
+                gaussians.get_opacity.grad = None
+                gaussians.get_scaling.grad = None
+                gaussians.get_rotation.grad = None
+
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none = True)
 

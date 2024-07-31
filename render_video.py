@@ -23,15 +23,29 @@ from gaussian_renderer import GaussianModel
 from time import time
 from scene.cameras import Camera
 import numpy as np
-from scene.colmap_loader import rotmat2qvec, qvec2rotmat
+from scene.colmap_loader import qvec2rotmat
 import cv2
+
+
+def rotmat2qvec(R):
+    Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = R.flat
+    K = np.array([
+        [Rxx - Ryy - Rzz, 0, 0, 0],
+        [Ryx + Rxy, Ryy - Rxx - Rzz, 0, 0],
+        [Rzx + Rxz, Rzy + Ryz, Rzz - Rxx - Ryy, 0],
+        [Ryz - Rzy, Rzx - Rxz, Rxy - Ryx, Rxx + Ryy + Rzz]]) / 3.0
+    eigvals, eigvecs = np.linalg.eigh(K)
+    qvec = eigvecs[[3, 0, 1, 2], np.argmax(eigvals)]
+    if qvec[0] < 0:
+        qvec *= -1
+    return qvec
 
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
     data_types = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading']
     data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading_light_200_radiance_30_radius_2']
-    suffix = 'diffusion_regularized'
+    suffix = 'samples_new_120'
 
     makedirs('videos', exist_ok=True)
     
@@ -51,19 +65,35 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
             for alpha in np.arange(0, 1.01, 0.03):
 
                 T = (1-alpha)*view1.T + alpha*view2.T
+                #print(os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
+                #print("T", T)
                 #R = (1-alpha)*view1.R + alpha*view2.R
+
+                #print("view1.R", view1.R)
+                #print("view2.R", view2.R)
 
                 q1 = rotmat2qvec(view1.R)
                 q2 = rotmat2qvec(view2.R)
 
+                if np.abs(q1-q2).sum()>np.abs(-q1-q2).sum():
+                    q1 *= -1
+
+                #print("q1", q1)
+                #print("q2", q2)
+
                 theta = np.arccos(np.dot(q1, q2))
+                #print("theta", theta)
 
                 q3 = (np.sin((1-alpha)*theta)/np.sin(theta))*q1 + (np.sin(alpha*theta)/np.sin(theta))*q2
                 R = qvec2rotmat(q3)
+                #print("R", R)
 
                 view3 = Camera(0, R, T, view1.FoVx, view1.FoVy, view1.original_image, gt_alpha_mask=None,
                             image_name=view1.image_name, uid=view1.uid,
                             trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda")
+                
+                view3.projection_matrix = view1.projection_matrix.detach().clone()
+                view3.full_proj_transform = (view3.world_view_transform.unsqueeze(0).bmm(view3.projection_matrix.unsqueeze(0))).squeeze(0)
 
                 rendering = render_combined(view3, gaussians, pipeline, background, data_type = data_type)["render"]
                 torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
