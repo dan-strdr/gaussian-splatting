@@ -38,6 +38,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     normal_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "normal")
     normal_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "normal")
 
+    position_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", "position")
+
     shading_render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders", shading_folder_name)
     shading_gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt", "shading")
 
@@ -52,6 +54,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     makedirs(normal_render_path, exist_ok=True)
     makedirs(normal_gts_path, exist_ok=True)
+
+    makedirs(position_render_path, exist_ok=True)
 
     makedirs(shading_render_path, exist_ok=True)
     makedirs(shading_gts_path, exist_ok=True)
@@ -85,6 +89,11 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         gt = view.normal_image[0:3, :, :]
         torchvision.utils.save_image(rendering, os.path.join(normal_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(normal_gts_path, '{0:05d}'.format(idx) + ".png"))
+
+        t4 = time()
+
+        rendering = render_combined(view, gaussians, pipeline, background, data_type = 'position')["render"]
+        torchvision.utils.save_image(rendering, os.path.join(position_render_path, '{0:05d}'.format(idx) + ".png"))
 
         t5 = time()
 
