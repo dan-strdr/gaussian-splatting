@@ -54,6 +54,7 @@ class GaussianModel:
         self._rotation = torch.empty(0)
         self._opacity = torch.empty(0)
         self.max_radii2D = torch.empty(0)
+        self._depth_global_scale = torch.empty(0)
         self.xyz_gradient_accum = torch.empty(0)
         self.denom = torch.empty(0)
         self.optimizer = None
@@ -74,6 +75,7 @@ class GaussianModel:
             self._rotation,
             self._opacity,
             self.max_radii2D,
+            self._depth_global_scale,
             self.xyz_gradient_accum,
             self.denom,
             self.optimizer.state_dict(),
@@ -92,6 +94,7 @@ class GaussianModel:
         self._rotation, 
         self._opacity,
         self.max_radii2D, 
+        self._depth_global_scale,
         xyz_gradient_accum, 
         denom,
         opt_dict, 
@@ -113,6 +116,7 @@ class GaussianModel:
         self._rotation, 
         self._opacity,
         self.max_radii2D, 
+        self._depth_global_scale,
         xyz_gradient_accum, 
         denom,
         opt_dict, 
@@ -150,6 +154,10 @@ class GaussianModel:
     @property
     def get_normal(self):
         return self._normal
+    
+    @property
+    def get_depth_global_scale(self):
+        return self._depth_global_scale
 
     @property
     def get_opacity(self):
@@ -189,6 +197,7 @@ class GaussianModel:
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+        self._depth_global_scale = nn.Parameter(torch.tensor(0.001).requires_grad_(True).to("cuda"))
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
@@ -204,7 +213,8 @@ class GaussianModel:
             {'params': [self._normal], 'lr': training_args.normal_lr, "name": "f_normal"},
             {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
             {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-            {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+            {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+            {'params': [self._depth_global_scale], 'lr': training_args.depth_global_scale_lr, "name": "depth_global_scale"}
         ]
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
@@ -343,6 +353,7 @@ class GaussianModel:
         self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device="cuda").requires_grad_(True))
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device="cuda").requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device="cuda").requires_grad_(True))
+        self._depth_global_scale = nn.Parameter(torch.tensor(0.001).requires_grad_(True).to("cuda"))
 
         self.active_sh_degree = self.max_sh_degree
 
@@ -390,6 +401,7 @@ class GaussianModel:
         self._mro = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._bc = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._normal = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
+        self._depth_global_scale = nn.Parameter(torch.tensor(0.001).requires_grad_(True).to("cuda"))
 
         self.active_sh_degree = self.max_sh_degree
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
@@ -397,6 +409,8 @@ class GaussianModel:
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
+            if group["name"] == "depth_global_scale":
+                continue
             if group["name"] == name:
                 stored_state = self.optimizer.state.get(group['params'][0], None)
                 stored_state["exp_avg"] = torch.zeros_like(tensor)
@@ -412,6 +426,8 @@ class GaussianModel:
     def _prune_optimizer(self, mask):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
+            if group["name"] == "depth_global_scale":
+                continue
             stored_state = self.optimizer.state.get(group['params'][0], None)
             if stored_state is not None:
                 stored_state["exp_avg"] = stored_state["exp_avg"][mask]
@@ -450,6 +466,8 @@ class GaussianModel:
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             assert len(group["params"]) == 1
+            if group["name"] == "depth_global_scale":
+                continue
             extension_tensor = tensors_dict[group["name"]]
             stored_state = self.optimizer.state.get(group['params'][0], None)
             if stored_state is not None:

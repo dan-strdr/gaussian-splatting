@@ -14,6 +14,8 @@ import numpy as np
 from utils.general_utils import PILtoTorch
 from utils.graphics_utils import fov2focal
 from math import sin, cos, tan, pi
+import torch
+import cv2
 
 WARNED = False
 
@@ -56,13 +58,15 @@ def loadCam(args, id, cam_info, resolution_scale):
     resized_normal_image_rgb = PILtoTorch(cam_info.normal_image, resolution)
     normal_image = resized_normal_image_rgb[:3, ...]
 
+    depth_image = torch.from_numpy(cv2.resize(cam_info.depth_image, resolution, interpolation = cv2.INTER_AREA).transpose(2, 0, 1))
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
                   image=gt_image, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device,
                   projection_matrix=cam_info.projection_matrix, bc_image=bc_image, 
-                  mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position)
+                  mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position,
+                  depth_image=depth_image)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []

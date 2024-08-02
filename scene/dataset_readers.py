@@ -22,6 +22,9 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
+import OpenEXR
+os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
+import cv2
 
 
 class CameraInfo(NamedTuple):
@@ -40,6 +43,7 @@ class CameraInfo(NamedTuple):
     mro_image: np.array
     normal_image: np.array
     camera_position: np.array
+    depth_image: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -115,10 +119,16 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         normal_image_path = os.path.join(images_folder, 'normal', os.path.basename(extr.name))
         normal_image = Image.open(normal_image_path)
 
+        depth_name = int(extr.name[extr.name.find("_")+1: extr.name.find(".")])
+        depth_image_path = os.path.join(images_folder, 'depth', f"{depth_name:03d}_depth.exr")
+        depth_image = cv2.imread(depth_image_path, -1)
+        depth_image[:,:,0] = depth_image[:,:,2]
+        depth_image[:,:,1] = depth_image[:,:,2]
+
         cam_info =  CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height,
                             projection_matrix=None, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
-                            camera_position=None)
+                            camera_position=None, depth_image=depth_image)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos

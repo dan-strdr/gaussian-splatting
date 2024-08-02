@@ -19,7 +19,7 @@ class Camera(nn.Module):
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  projection_matrix = None, bc_image = None, mro_image = None, normal_image=None,
-                 camera_position=None
+                 camera_position=None, depth_image = None
                  ):
         super(Camera, self).__init__()
 
@@ -51,6 +51,8 @@ class Camera(nn.Module):
         if normal_image is not None:
             self.normal_image = normal_image.clamp(0.0, 1.0).to(self.data_device)
             self.normal_image_mask = nn.Parameter(torch.ones_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+        if depth_image is not None:
+            self.depth_image = depth_image.to(self.data_device)
         self.image_width = self.original_image.shape[2]
         self.image_height = self.original_image.shape[1]
 

@@ -51,8 +51,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree)
     scene = Scene(dataset, gaussians)
-    scene.gaussians.load_ply_original("/home/meric/umut/gaussian-splatting/data/sugarfine_3Dgs7000_sdfestim02_sdfnorm02_level03_decim1000000_normalconsistency01_gaussperface1.ply")
-    gaussians = scene.gaussians
+    #scene.gaussians.load_ply_original("/home/meric/umut/gaussian-splatting/data/sugarfine_3Dgs7000_sdfestim02_sdfnorm02_level03_decim1000000_normalconsistency01_gaussperface1.ply")
+    #gaussians = scene.gaussians
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
@@ -192,6 +192,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ll1 = l1_loss(normal_image, normal_gt_image)
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
 
+            # position
+            position_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'position')
+            position_image = position_render_pkg["render"]
+
+            # Loss
+            depth_gt_image = viewpoint_cam.depth_image.cuda()
+            #print("gaussians.get_depth_global_scale", gaussians.get_depth_global_scale)
+            #Ll1 = l1_loss(position_image, depth_gt_image*gaussians.get_depth_global_scale)
+            #print("inf sum", torch.isfinite(depth_gt_image).sum())
+            Ll1 = l1_loss(position_image[torch.isfinite(depth_gt_image)], depth_gt_image[torch.isfinite(depth_gt_image)]*gaussians.get_depth_global_scale)
+            loss += (1.0 - opt.lambda_dssim) * Ll1 * 0.2
+
         loss.backward()
 
         iter_end.record()
@@ -211,7 +223,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
 
-            """
+            
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
@@ -224,13 +236,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
-            """
+            
             # Optimizer step
             if iteration < opt.iterations:
-                gaussians.get_xyz.grad = None
-                gaussians.get_opacity.grad = None
-                gaussians.get_scaling.grad = None
-                gaussians.get_rotation.grad = None
+                #gaussians.get_xyz.grad = None
+                #gaussians.get_opacity.grad = None
+                #gaussians.get_scaling.grad = None
+                #gaussians.get_rotation.grad = None
 
                 gaussians.optimizer.step()
                 gaussians.optimizer.zero_grad(set_to_none = True)
