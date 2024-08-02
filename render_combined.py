@@ -93,6 +93,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         t4 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'position')["render"]
+        #print(rendering.min(), rendering.max(), rendering.mean())
         torchvision.utils.save_image(rendering, os.path.join(position_render_path, '{0:05d}'.format(idx) + ".png"))
 
         t5 = time()
