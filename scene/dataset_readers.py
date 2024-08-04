@@ -328,12 +328,12 @@ def readSyntheticCamerasAndPoints(storage_path, file_name, extension, metadata_f
                 test_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
                             projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
-                            camera_position=camera_position))
+                            camera_position=camera_position, depth_image=None))
             else:
                 train_cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=foV_y, FovX=foV_x, image=image,
                             image_path=image_path, image_name=image_name, width=image_width, height=image_height,
                             projection_matrix=projection_matrix, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
-                            camera_position=camera_position))
+                            camera_position=camera_position, depth_image=None))
 
 
     ply_path = os.path.join(storage_path, "points3d.ply")

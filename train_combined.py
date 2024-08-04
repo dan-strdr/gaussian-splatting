@@ -192,17 +192,19 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ll1 = l1_loss(normal_image, normal_gt_image)
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
 
-            # position
-            position_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'position')
-            position_image = position_render_pkg["render"]
+            if iteration >= 3000:
 
-            # Loss
-            depth_gt_image = viewpoint_cam.depth_image.cuda()
-            #print("gaussians.get_depth_global_scale", gaussians.get_depth_global_scale)
-            #Ll1 = l1_loss(position_image, depth_gt_image*gaussians.get_depth_global_scale)
-            #print("inf sum", torch.isfinite(depth_gt_image).sum())
-            Ll1 = l1_loss(position_image[torch.isfinite(depth_gt_image)], depth_gt_image[torch.isfinite(depth_gt_image)]*gaussians.get_depth_global_scale)
-            loss += (1.0 - opt.lambda_dssim) * Ll1 * 0.2
+                # position
+                position_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'position')
+                position_image = position_render_pkg["render"]
+
+                # Loss
+                depth_gt_image = viewpoint_cam.depth_image.cuda()
+                #print("gaussians.get_depth_global_scale", gaussians.get_depth_global_scale)
+                #Ll1 = l1_loss(position_image, depth_gt_image*gaussians.get_depth_global_scale)
+                #print("inf sum", torch.isfinite(depth_gt_image).sum())
+                Ll1 = l1_loss(position_image[torch.isfinite(depth_gt_image)], depth_gt_image[torch.isfinite(depth_gt_image)]*gaussians.get_depth_global_scale)
+                loss += (1.0 - opt.lambda_dssim) * Ll1 * 0.5
 
         loss.backward()
 

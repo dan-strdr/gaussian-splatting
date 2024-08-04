@@ -57,8 +57,10 @@ def loadCam(args, id, cam_info, resolution_scale):
 
     resized_normal_image_rgb = PILtoTorch(cam_info.normal_image, resolution)
     normal_image = resized_normal_image_rgb[:3, ...]
-
-    depth_image = torch.from_numpy(cv2.resize(cam_info.depth_image, resolution, interpolation = cv2.INTER_AREA).transpose(2, 0, 1))
+    if cam_info.depth_image is not None:
+        depth_image = torch.from_numpy(cv2.resize(cam_info.depth_image, resolution, interpolation = cv2.INTER_AREA).transpose(2, 0, 1))
+    else:
+        depth_image = None
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 

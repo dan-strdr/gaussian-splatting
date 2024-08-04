@@ -9,7 +9,7 @@ def shade(viewpoint_camera, pc, light_pos = None, light_color = None, lighting_o
 
     view_pos = viewpoint_camera.camera_center # torch.from_numpy(viewpoint_camera.camera_center).to(viewpoint_camera.data_device)
 
-    radiance_multiplier = 200
+    radiance_multiplier = 6
     nof_lights = 200
 
     upper_coordinates = torch.quantile(pc.get_xyz, 0.95, dim=0)

@@ -33,6 +33,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     frame_number = 20
 
+    """
     coordinates = np.array([[-5.5, 5.7, 3.5],
                         [-5.5, -1.0, 3.5],
                         [-8, -1.0, 12],
@@ -44,6 +45,13 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
                         [1.0, 4.0, 11],
                         [2.6, 0.0, 10.5],
                         [2.6, 2.0, 10.5]], dtype=np.float32)
+    """
+
+    
+    coordinates = np.array([[0, 1.25, 0],
+                        [0, 1.25, 0.6],
+                        [0, 0.4, 0.6],
+                        [0.8, 0.4, 0.6]], dtype=np.float32)
 
     light_coordinates = []
 
