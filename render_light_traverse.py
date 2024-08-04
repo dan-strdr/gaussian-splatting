@@ -49,9 +49,12 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     
     coordinates = np.array([[0, 1.25, 0],
-                        [0, 1.25, 0.6],
-                        [0, 0.4, 0.6],
-                        [0.8, 0.4, 0.6]], dtype=np.float32)
+                        [0, 1.25, 0.9],
+                        [0, 0.4, 0.9],
+                        [0.8, 0.4, 0.9],
+                        [0.8, 0.4, 0],
+                        [0, 0.4, 0],
+                        [0, 0.4, 0.9]], dtype=np.float32)
 
     light_coordinates = []
 
