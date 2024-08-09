@@ -192,7 +192,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ll1 = l1_loss(normal_image, normal_gt_image)
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
 
-            if iteration >= 3000:
+            if iteration >= 30010:
 
                 # position
                 position_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'position')
