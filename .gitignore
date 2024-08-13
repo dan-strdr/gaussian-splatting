@@ -14,3 +14,4 @@ normal_corrected/*
 *.mp4
 image_logs/*
 submodules/*
+*.log

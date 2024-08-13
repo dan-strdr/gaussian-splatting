@@ -45,7 +45,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     os.makedirs(os.path.join(image_log_folder, normal_folder), exist_ok=True)
 
     mask_coef = 60/255
-    regularization_start_iteration = 30100 # 1500
+    regularization_start_iteration = 0 # 1500
 
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)

@@ -23,7 +23,7 @@ class Scene:
 
     gaussians : GaussianModel
 
-    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0]):
+    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[4]):
         """b
         :param path: Path to colmap scene main folder.
         """
@@ -78,8 +78,8 @@ class Scene:
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
 
         data_types = ['bc_image_mask', 'mro_image_mask', 'normal_image_mask']
-        l = [{'params': [getattr(current_camera, data_type)], 'lr': 0.01, "name": data_type} 
-        for data_type in data_types for current_camera in self.train_cameras[1.0]]
+        l = [{'params': [getattr(current_camera, data_type)], 'lr': 0.001, "name": data_type} 
+        for data_type in data_types for current_camera in self.train_cameras[resolution_scales[0]]]
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
 
@@ -95,8 +95,8 @@ class Scene:
         point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))
         self.gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))
 
-    def getTrainCameras(self, scale=1.0):
+    def getTrainCameras(self, scale=4):
         return self.train_cameras[scale]
 
-    def getTestCameras(self, scale=1.0):
+    def getTestCameras(self, scale=4):
         return self.test_cameras[scale]

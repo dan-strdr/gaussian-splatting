@@ -47,7 +47,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
                         [2.6, 2.0, 10.5]], dtype=np.float32)
     """
 
-    
+    """
     coordinates = np.array([[0, 1.25, 0],
                         [0, 1.25, 0.9],
                         [0, 0.4, 0.9],
@@ -55,6 +55,13 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
                         [0.8, 0.4, 0],
                         [0, 0.4, 0],
                         [0, 0.4, 0.9]], dtype=np.float32)
+    """
+    coordinates = np.array([[2.5, 0.6, 1.6],
+                        [2.5, 0.6, 0.4],
+                        [2.5, 1.2, 0.4],
+                        [3.6, 1.2, 0.4],
+                        [3.6, 1.2, 1.6],
+                        [3.6, 0.6, 1.6]], dtype=np.float32)
 
     light_coordinates = []
 
@@ -68,7 +75,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     makedirs(light_traverse_render_path, exist_ok=True)
 
-    view = views[0]
+    view = views[26]
 
     #for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
 

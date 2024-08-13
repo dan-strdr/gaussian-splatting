@@ -44,13 +44,16 @@ class Camera(nn.Module):
         self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
         if bc_image is not None:
             self.bc_image = bc_image.clamp(0.0, 1.0).to(self.data_device)
-            self.bc_image_mask = nn.Parameter(torch.ones_like(bc_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            #self.bc_image_mask = nn.Parameter(torch.ones_like(bc_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            self.bc_image_mask = nn.Parameter(torch.zeros_like(bc_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if mro_image is not None:
             self.mro_image = mro_image.clamp(0.0, 1.0).to(self.data_device)
-            self.mro_image_mask = nn.Parameter(torch.ones_like(mro_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            #self.mro_image_mask = nn.Parameter(torch.ones_like(mro_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            self.mro_image_mask = nn.Parameter(torch.zeros_like(mro_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if normal_image is not None:
             self.normal_image = normal_image.clamp(0.0, 1.0).to(self.data_device)
-            self.normal_image_mask = nn.Parameter(torch.ones_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            #self.normal_image_mask = nn.Parameter(torch.ones_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
+            self.normal_image_mask = nn.Parameter(torch.zeros_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if depth_image is not None:
             self.depth_image = depth_image.to(self.data_device)
         self.image_width = self.original_image.shape[2]
