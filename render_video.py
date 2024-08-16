@@ -43,8 +43,10 @@ def rotmat2qvec(R):
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
-    data_types = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading']
-    data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading_light_200_radiance_30_radius_2']
+    #data_types = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading']
+    #data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal', 'shading_light_200_radiance_30_radius_2']
+    data_types = ['render', 'base_color', 'met_rough_occ', 'normal']
+    data_type_folder_names = ['render', 'base_color', 'met_rough_occ', 'normal']
     suffix = 'samples_new_120'
 
     makedirs('videos', exist_ok=True)

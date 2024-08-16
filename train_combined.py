@@ -44,7 +44,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     normal_folder = 'normal'
     os.makedirs(os.path.join(image_log_folder, normal_folder), exist_ok=True)
 
-    mask_coef = 60/255
+    mask_coef = 60/255 # 60/255
     regularization_start_iteration = 0 # 1500
 
     first_iter = 0
