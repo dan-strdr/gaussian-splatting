@@ -10,8 +10,10 @@ screenshots
 data/*
 logs/*
 normal_corrected/*
+normal_corrected2/*
 *.avi
 *.mp4
 image_logs/*
 submodules/*
 *.log
+std_logs/*

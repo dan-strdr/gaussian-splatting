@@ -4,12 +4,12 @@ import os
 import numpy as np
 from PIL import Image
 
-path = '/home/meric/umut/gaussian-splatting/data/scannet++_colmap'
-cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
+path = '/home/meric/umut/gaussian-splatting/data/7b6477cb95'
+cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
 
-cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
+cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
 
-output_path = 'normal_corrected'
+output_path = 'normal_corrected2'
 
 os.makedirs(output_path, exist_ok=True)
 

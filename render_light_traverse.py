@@ -75,7 +75,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     makedirs(light_traverse_render_path, exist_ok=True)
 
-    view = views[26]
+    view = views[75]
 
     #for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
 

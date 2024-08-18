@@ -1,0 +1,2 @@
+python train_combined.py -s data/scannet++_colmap -m output/scannet++_colmap_try_regularization0_60_inverse_try2
+python render_combined.py -m output/scannet++_colmap_try_regularization0_60_inverse_try2

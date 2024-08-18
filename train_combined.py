@@ -29,8 +29,24 @@ try:
     TENSORBOARD_FOUND = True
 except ImportError:
     TENSORBOARD_FOUND = False
+import torchvision
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
+
+    std_filter = torch.ones(3, 3)*-1
+    std_filter[1, 1] = 8
+    std_filter = std_filter.float().requires_grad_(True)
+    
+    std_filter = std_filter.repeat(3, 3, 1, 1).cuda()
+
+    dilation_filter = torch.ones(3, 3)
+
+    dilation_filter = dilation_filter.float().requires_grad_(True)
+    
+    dilation_filter = dilation_filter.repeat(3, 3, 1, 1).cuda()
+
+    std_log_folder = 'std_logs'
+    os.makedirs(std_log_folder, exist_ok=True)
 
     image_log_folder = 'image_logs'
     os.makedirs(image_log_folder, exist_ok=True)
@@ -112,6 +128,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         Ll1 = l1_loss(image, gt_image)
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
 
+        #print(f"Render Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))}")
+
         if iteration >= regularization_start_iteration:
 
             # met_rough_occ
@@ -126,6 +144,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Lmask = ((met_rough_occ_gt_image_mask*-1)+1).mean()
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
+            if iteration >= 15000:
+                met_rough_occ_gt_image_std_filter_output = torch.nn.functional.conv2d(met_rough_occ_gt_image.unsqueeze(0), std_filter, padding=1).abs()/8
+                gt_std_mask = (met_rough_occ_gt_image_std_filter_output > 0.02).float()
+                gt_std_mask = torch.nn.functional.conv2d(gt_std_mask, dilation_filter, padding=1)
+                gt_std_mask = gt_std_mask<1
+
+                met_rough_occ_image_std_filter_output = torch.nn.functional.conv2d(met_rough_occ_image.unsqueeze(0), std_filter, padding=1).abs()/8
+                met_rough_occ_std_loss = met_rough_occ_image_std_filter_output[gt_std_mask].mean()*2
+                loss += met_rough_occ_std_loss
+                #print("met_rough_occ_std_loss:", met_rough_occ_std_loss)
+
+            #print(f"MetRoughOcc Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
             #print('Lmask metroughocc', Lmask.item())
             #print('met_rough_occ_gt_image_mask.mean()', met_rough_occ_gt_image_mask.mean().item())
 
@@ -141,6 +171,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Lmask = ((base_color_gt_image_mask*-1)+1).mean()
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
+            #print(f"BaseColor Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
+
             # normal
             normal_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'normal')
             normal_image = normal_render_pkg["render"]
@@ -153,6 +185,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Lmask = ((normal_gt_image_mask*-1)+1).mean()
             loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
+            #print(f"Normal Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
+            #print("loss:", loss)
 
             if iteration%100==0:
                 saved_img = Image.fromarray((torch.transpose(torch.transpose(met_rough_occ_gt_image_mask, 0, 2), 0, 1).detach().cpu().numpy()*255).astype(np.uint8))
@@ -163,6 +197,24 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
                 saved_img = Image.fromarray((torch.transpose(torch.transpose(normal_gt_image_mask, 0, 2), 0, 1).detach().cpu().numpy()*255).astype(np.uint8))
                 saved_img.save(os.path.join(image_log_folder, normal_folder, f'normal_mask_{iteration:05d}_{viewpoint_cam.image_name}.png'))
+
+                std_filter_output = torch.nn.functional.conv2d(met_rough_occ_gt_image.unsqueeze(0), std_filter, padding=1).abs()/8
+                #std_filter_output = (std_filter_output-std_filter_output.min())/(std_filter_output.max()-std_filter_output.min()) 
+                std_filter_output = (std_filter_output > 0.02).float()
+                std_filter_output = torch.nn.functional.conv2d(std_filter_output, dilation_filter, padding=1)
+                std_filter_output = (std_filter_output<1).float()
+                #std_filter_output = (std_filter_output < 0.01).float()
+                torchvision.utils.save_image(std_filter_output, os.path.join(std_log_folder, f"{iteration:05d}_met_rough_occ_gt" + ".png"))
+
+                std_filter_output = torch.nn.functional.conv2d(met_rough_occ_image.unsqueeze(0), std_filter, padding=1).abs()/8
+                #std_filter_output = (std_filter_output-std_filter_output.min())/(std_filter_output.max()-std_filter_output.min())
+                std_filter_output = (std_filter_output < 0.02).float()
+                torchvision.utils.save_image(std_filter_output, os.path.join(std_log_folder, f"{iteration:05d}_met_rough_occ_render" + ".png"))
+
+                torchvision.utils.save_image(met_rough_occ_gt_image[0:3, :, :], os.path.join(std_log_folder, f"{iteration:05d}_met_rough_occ" + ".png"))
+
+
+
         else:
             
             # met_rough_occ
