@@ -1,2 +1,2 @@
-python train_combined.py -s data/scannet++_colmap -m output/scannet++_colmap_try_regularization0_60_inverse_try2
-python render_combined.py -m output/scannet++_colmap_try_regularization0_60_inverse_try2
+python train_combined.py -s data/7b6477cb95 -m output/7b6477cb95_try_regularization0_250_inverse_try_stdloss20_02_3by3_dilated_mask250_regssimmask
+python render_combined.py -m output/7b6477cb95_try_regularization0_250_inverse_try_stdloss20_02_3by3_dilated_mask250_regssimmask

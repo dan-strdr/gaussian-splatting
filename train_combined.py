@@ -60,7 +60,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     normal_folder = 'normal'
     os.makedirs(os.path.join(image_log_folder, normal_folder), exist_ok=True)
 
-    mask_coef = 60/255 # 60/255
+    mask_coef = 250/255 # 60/255
     regularization_start_iteration = 0 # 1500
 
     first_iter = 0
@@ -132,6 +132,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         if iteration >= regularization_start_iteration:
 
+            #opt.lambda_dssim = 0
+
             # met_rough_occ
             met_rough_occ_render_pkg = render_combined(viewpoint_cam, gaussians, pipe, bg, data_type = 'met_rough_occ')
             met_rough_occ_image = met_rough_occ_render_pkg["render"]
@@ -142,7 +144,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             met_rough_occ_gt_image_mask = torch.clip(met_rough_occ_gt_image_mask, 0, 1)
             Ll1 = l1_loss(met_rough_occ_image*met_rough_occ_gt_image_mask, met_rough_occ_gt_image*met_rough_occ_gt_image_mask)
             Lmask = ((met_rough_occ_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image*met_rough_occ_gt_image_mask, met_rough_occ_gt_image*met_rough_occ_gt_image_mask)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
             if iteration >= 15000:
                 met_rough_occ_gt_image_std_filter_output = torch.nn.functional.conv2d(met_rough_occ_gt_image.unsqueeze(0), std_filter, padding=1).abs()/8
@@ -151,7 +153,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gt_std_mask = gt_std_mask<1
 
                 met_rough_occ_image_std_filter_output = torch.nn.functional.conv2d(met_rough_occ_image.unsqueeze(0), std_filter, padding=1).abs()/8
-                met_rough_occ_std_loss = met_rough_occ_image_std_filter_output[gt_std_mask].mean()*2
+                met_rough_occ_std_loss = met_rough_occ_image_std_filter_output[gt_std_mask].mean()*20
                 loss += met_rough_occ_std_loss
                 #print("met_rough_occ_std_loss:", met_rough_occ_std_loss)
 
@@ -169,7 +171,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             base_color_gt_image_mask = torch.clip(base_color_gt_image_mask, 0, 1)
             Ll1 = l1_loss(base_color_image*base_color_gt_image_mask, base_color_gt_image*base_color_gt_image_mask)
             Lmask = ((base_color_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image*base_color_gt_image_mask, base_color_gt_image*base_color_gt_image_mask)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
             #print(f"BaseColor Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
 
@@ -183,7 +185,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             normal_gt_image_mask = torch.clip(normal_gt_image_mask, 0, 1)
             Ll1 = l1_loss(normal_image*normal_gt_image_mask, normal_gt_image*normal_gt_image_mask)
             Lmask = ((normal_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image*normal_gt_image_mask, normal_gt_image*normal_gt_image_mask)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
             #print(f"Normal Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
             #print("loss:", loss)
