@@ -17,3 +17,9 @@ image_logs/*
 submodules/*
 *.log
 std_logs/*
+benchmark_logs/*
+depth_logs/*
+normal_corrected*
+*.jpg
+*.png
+*.JPG

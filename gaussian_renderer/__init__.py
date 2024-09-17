@@ -260,6 +260,11 @@ def render_combined(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
             elif data_type == 'normal':
                 shs = pc.get_normal
             elif data_type == 'position':
+                shs = pc.get_xyz.unsqueeze(1)
+                shs = (shs - shs.min())/(shs.max() - shs.min())
+                shs = (shs - 0.5)/0.28209479177387814
+                #shs = shs.detach().clone()
+            elif data_type == 'depth':
                 dir_pp = (pc.get_xyz - viewpoint_camera.camera_center.repeat(pc.get_features.shape[0], 1))
                 shs = dir_pp.norm(dim=1, keepdim=True)
                 #shs = (shs-shs.min())/(shs.max()-shs.min())

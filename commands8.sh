@@ -1,0 +1,4 @@
+python render_combined.py -m output/7b6477cb95_colmap_try_depth_2_moregaussians
+python render_video.py -m output/7b6477cb95_colmap_try_depth_2_moregaussians
+python render_light_traverse.py -m output/7b6477cb95_colmap_try_depth_2_moregaussians
+python render_deferred_light_traverse.py -m output/7b6477cb95_colmap_try_depth_2_moregaussians

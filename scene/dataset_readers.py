@@ -11,7 +11,7 @@
 
 import os
 import sys
-from PIL import Image
+from PIL import Image, ImageOps
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
@@ -124,7 +124,11 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         #depth_image = cv2.imread(depth_image_path, -1)
         #depth_image[:,:,0] = depth_image[:,:,2]
         #depth_image[:,:,1] = depth_image[:,:,2]
-        depth_image = None
+
+        depth_image_path = os.path.join(images_folder, 'depth', os.path.basename(extr.name))
+        depth_image = Image.open(depth_image_path)
+        depth_image = ImageOps.colorize(depth_image, black="black", white="white")
+        #depth_image = None
 
         cam_info =  CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height,

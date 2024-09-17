@@ -1,0 +1,5 @@
+python train_combined.py -s data/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples -m output/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_50_depth_2
+python render_combined.py -m output/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_50_depth_2
+python render_video.py -m output/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_50_depth_2
+python render_light_traverse.py -m output/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_50_depth_2
+python render_deferred_light_traverse.py -m output/L3D124S21ENDIDR4BOIUI5NYALUF3P3XA888_samples_50_depth_2

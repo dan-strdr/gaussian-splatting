@@ -128,10 +128,18 @@ class GaussianModel:
     @property
     def get_scaling(self):
         return self.scaling_activation(self._scaling)
+
+    @property
+    def get_scaling_parameter(self):
+        return self._scaling
     
     @property
     def get_rotation(self):
         return self.rotation_activation(self._rotation)
+
+    @property
+    def get_rotation_parameter(self):
+        return self._rotation
     
     @property
     def get_xyz(self):
@@ -162,6 +170,10 @@ class GaussianModel:
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
+
+    @property
+    def get_opacity_parameter(self):
+        return self._opacity
     
     def get_covariance(self, scaling_modifier = 1):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)

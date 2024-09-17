@@ -57,23 +57,32 @@ def loadCam(args, id, cam_info, resolution_scale):
 
     resized_normal_image_rgb = PILtoTorch(cam_info.normal_image, resolution)
     normal_image = resized_normal_image_rgb[:3, ...]
+
+    if cam_info.depth_image is not None:
+        resized_depth_image_rgb = PILtoTorch(cam_info.depth_image, resolution)
+        depth_image = resized_depth_image_rgb[:3, ...]
+    else:
+        depth_image = None
+        
+    """
     if cam_info.depth_image is not None:
         depth_image = torch.from_numpy(cv2.resize(cam_info.depth_image, resolution, interpolation = cv2.INTER_AREA).transpose(2, 0, 1))
     else:
         depth_image = None
-
+    """
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
-                  FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
-                  image=gt_image, gt_alpha_mask=loaded_mask,
-                  image_name=cam_info.image_name, uid=id, data_device=args.data_device,
-                  projection_matrix=cam_info.projection_matrix, bc_image=bc_image, 
-                  mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position,
-                  depth_image=depth_image)
+                FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
+                image=gt_image, gt_alpha_mask=loaded_mask,
+                image_name=cam_info.image_name, uid=id, data_device="cpu",# data_device=args.data_device,
+                projection_matrix=cam_info.projection_matrix, bc_image=bc_image, 
+                mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position,
+                depth_image=depth_image)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
 
     for id, c in enumerate(cam_infos):
+        print(id)
         camera_list.append(loadCam(args, id, c, resolution_scale))
 
     return camera_list

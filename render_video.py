@@ -102,16 +102,18 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
                 idx += 1
 
                 #break
-                
+
+            if i == 70:
+                break
             #break
         
         video_name = os.path.join('videos', f'{data_type_folder_name}_{suffix}_video.avi')
 
-        images = [img for img in sorted(os.listdir(render_path)) if img.endswith(".png")]
+        images = [img for img in sorted(os.listdir(render_path)) if img.endswith(".png")][:2000]
         frame = cv2.imread(os.path.join(render_path, images[0]))
         height, width, layers = frame.shape
 
-        video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'MJPG'), 10, (width,height))
+        video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'MJPG'), 25, (width,height))
 
         for image in images:
             video.write(cv2.imread(os.path.join(render_path, image)))

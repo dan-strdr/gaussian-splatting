@@ -65,41 +65,45 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         t1 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'render')["render"]
-        gt = view.original_image[0:3, :, :]
+        gt = view.original_image[0:3, :, :].cuda().float()
         torchvision.utils.save_image(rendering, os.path.join(render_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(render_gts_path, '{0:05d}'.format(idx) + ".png"))
 
         t2 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'met_rough_occ')["render"]
-        gt = view.mro_image[0:3, :, :]
+        gt = view.mro_image[0:3, :, :].cuda().float()
         torchvision.utils.save_image(rendering, os.path.join(met_rough_occ_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(met_rough_occ_gts_path, '{0:05d}'.format(idx) + ".png"))
 
         t3 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'base_color')["render"]
-        gt = view.bc_image[0:3, :, :]
+        gt = view.bc_image[0:3, :, :].cuda().float()
         torchvision.utils.save_image(rendering, os.path.join(base_color_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(base_color_gts_path, '{0:05d}'.format(idx) + ".png"))
 
         t4 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'normal')["render"]
-        gt = view.normal_image[0:3, :, :]
+        gt = view.normal_image[0:3, :, :].cuda().float()
         torchvision.utils.save_image(rendering, os.path.join(normal_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(normal_gts_path, '{0:05d}'.format(idx) + ".png"))
 
         t4 = time()
 
-        rendering = render_combined(view, gaussians, pipeline, background, data_type = 'position')["render"]
-        #print(rendering.min(), rendering.max(), rendering.mean())
+        rendering = render_combined(view, gaussians, pipeline, background, data_type = 'depth')["render"]
+        rendering = (rendering-rendering.min())/(rendering.max()-rendering.min())
+        #print(rendering.shape)
+        #print(rendering[0].min(), rendering[0].max(), rendering[0].mean())
+        #print(rendering[1].min(), rendering[1].max(), rendering[1].mean())
+        #print(rendering[2].min(), rendering[2].max(), rendering[2].mean())
         torchvision.utils.save_image(rendering, os.path.join(position_render_path, '{0:05d}'.format(idx) + ".png"))
 
         t5 = time()
 
         rendering = render_combined(view, gaussians, pipeline, background, data_type = 'shading')["render"]
-        gt = view.original_image[0:3, :, :]
+        gt = view.original_image[0:3, :, :].cuda().float()
         torchvision.utils.save_image(rendering, os.path.join(shading_render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(shading_gts_path, '{0:05d}'.format(idx) + ".png"))
 

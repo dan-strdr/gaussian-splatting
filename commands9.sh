@@ -1,0 +1,2 @@
+python train_combined.py -s data/7b6477cb95_colmap -m output/7b6477cb95_colmap_try_depth_2_stdcheck10
+python render_combined.py -m output/7b6477cb95_colmap_try_depth_2_stdcheck10

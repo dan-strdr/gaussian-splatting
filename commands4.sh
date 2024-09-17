@@ -1,0 +1,2 @@
+python render_video.py -m output/7b6477cb95_colmap_try_regularization1_80_inverse_try_stdloss1_02_3by3_dilated_mask80
+python render_light_traverse.py -m output/7b6477cb95_colmap_try_regularization1_80_inverse_try_stdloss1_02_3by3_dilated_mask80
