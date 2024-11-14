@@ -44,6 +44,10 @@ class CameraInfo(NamedTuple):
     normal_image: np.array
     camera_position: np.array
     depth_image: np.array
+    K: np.array
+    bc_image_gt: np.array
+    mro_image_gt: np.array
+    normal_image_gt: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -91,6 +95,9 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         uid = intr.id
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
+        K = np.array([[intr.params[0], 0, intr.params[2]],
+                 [0, intr.params[1], intr.params[3]],
+                 [0, 0, 1]])
 
         #T += 0.5
 
@@ -119,6 +126,17 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         normal_image_path = os.path.join(images_folder, 'normal', os.path.basename(extr.name))
         normal_image = Image.open(normal_image_path)
 
+
+
+        bc_image_path = os.path.join(images_folder, 'base_color_gt', os.path.basename(extr.name))
+        bc_image_gt = Image.open(bc_image_path)
+
+        mro_image_path = os.path.join(images_folder, 'met_rough_occ_gt', os.path.basename(extr.name))
+        mro_image_gt = Image.open(mro_image_path)
+
+        normal_image_path = os.path.join(images_folder, 'normal_gt', os.path.basename(extr.name))
+        normal_image_gt = Image.open(normal_image_path)
+
         #depth_name = int(extr.name[extr.name.find("_")+1: extr.name.find(".")])
         #depth_image_path = os.path.join(images_folder, 'depth', f"{depth_name:03d}_depth.exr")
         #depth_image = cv2.imread(depth_image_path, -1)
@@ -133,7 +151,8 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         cam_info =  CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height,
                             projection_matrix=None, bc_image=bc_image, mro_image=mro_image, normal_image=normal_image,
-                            camera_position=None, depth_image=depth_image)
+                            camera_position=None, depth_image=depth_image, K=K, bc_image_gt=bc_image_gt, mro_image_gt=mro_image_gt, 
+                            normal_image_gt=normal_image_gt)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
@@ -183,8 +202,8 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
         test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
     else:
-        train_cam_infos = cam_infos
-        test_cam_infos = []
+        train_cam_infos = cam_infos[1:]
+        test_cam_infos = [cam_infos[0]]
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 

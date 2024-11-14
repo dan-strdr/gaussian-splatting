@@ -133,7 +133,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     #for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
 
     idx = 0
-    for i in tqdm(range(15, 25)):
+    for i in tqdm(range(15, 35)):
         view1 = views[i]
         view2 = views[i+1]
         for alpha in np.arange(0, 1.01, 0.03):

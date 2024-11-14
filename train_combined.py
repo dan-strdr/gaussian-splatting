@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim, l2_loss
+from utils.loss_utils import l1_loss, ssim, l2_loss, mae_loss
 from gaussian_renderer import render, network_gui, render_combined
 import sys
 from scene import Scene, GaussianModel
@@ -152,18 +152,19 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             met_rough_occ_gt_image = viewpoint_cam.mro_image.cuda().float()
             met_rough_occ_gt_image_mask = viewpoint_cam.mro_image_mask.cuda().float()
             met_rough_occ_gt_image_mask = torch.clip(met_rough_occ_gt_image_mask, 0, 1)
-            Ll1 = l1_loss(met_rough_occ_image*met_rough_occ_gt_image_mask, met_rough_occ_gt_image*met_rough_occ_gt_image_mask)
-            Lmask = ((met_rough_occ_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            #Ll1 = l1_loss(met_rough_occ_image*met_rough_occ_gt_image_mask, met_rough_occ_gt_image*met_rough_occ_gt_image_mask)
+            #Lmask = ((met_rough_occ_gt_image_mask*-1)+1).mean()
+            #loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
 
-            
+            Ll1 = l1_loss(met_rough_occ_image, met_rough_occ_gt_image)
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(met_rough_occ_image, met_rough_occ_gt_image))
 
             if iteration >= 15000:
                 
                 gt_std_mask = ((met_rough_occ_gt_image-transform(met_rough_occ_gt_image)).abs()<0.005)
                 met_rough_occ_std_loss = (met_rough_occ_image-transform(met_rough_occ_image)).abs()[gt_std_mask].mean()*10
                 #print("met_rough_occ_std_loss", met_rough_occ_std_loss)
-                loss += met_rough_occ_std_loss
+                #loss += met_rough_occ_std_loss
 
                 #met_rough_occ_gt_image_std_filter_output = torch.nn.functional.conv2d(met_rough_occ_gt_image.unsqueeze(0), std_filter, padding=3).abs()/48 # 8
                 #gt_std_mask = (met_rough_occ_gt_image_std_filter_output > 0.02).float()
@@ -190,9 +191,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             base_color_gt_image = viewpoint_cam.bc_image.cuda().float()
             base_color_gt_image_mask = viewpoint_cam.bc_image_mask.cuda().float()
             base_color_gt_image_mask = torch.clip(base_color_gt_image_mask, 0, 1)
-            Ll1 = l1_loss(base_color_image*base_color_gt_image_mask, base_color_gt_image*base_color_gt_image_mask)
-            Lmask = ((base_color_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            #Ll1 = l1_loss(base_color_image*base_color_gt_image_mask, base_color_gt_image*base_color_gt_image_mask)
+            #Lmask = ((base_color_gt_image_mask*-1)+1).mean()
+            #loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+
+            Ll1 = l1_loss(base_color_image, base_color_gt_image)
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image))
+
 
             #print(f"BaseColor Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(base_color_image, base_color_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
 
@@ -204,9 +209,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             normal_gt_image = viewpoint_cam.normal_image.cuda().float()
             normal_gt_image_mask = viewpoint_cam.normal_image_mask.cuda().float()
             normal_gt_image_mask = torch.clip(normal_gt_image_mask, 0, 1)
-            Ll1 = l1_loss(normal_image*normal_gt_image_mask, normal_gt_image*normal_gt_image_mask)
-            Lmask = ((normal_gt_image_mask*-1)+1).mean()
-            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+            #Ll1 = l1_loss(normal_image*normal_gt_image_mask, normal_gt_image*normal_gt_image_mask)
+            #Lmask = ((normal_gt_image_mask*-1)+1).mean()
+            #loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef
+
+            #mae_loss(normal_image, normal_gt_image)
+            Ll1 = l1_loss(normal_image, normal_gt_image)
+            loss += (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image))
 
             #print(f"Normal Loss: {(1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(normal_image, normal_gt_image)) + (1.0 - opt.lambda_dssim) * Lmask * mask_coef}")
             #print("loss:", loss)
@@ -397,6 +406,8 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
             if config['cameras'] and len(config['cameras']) > 0:
                 l1_test = 0.0
                 psnr_test = 0.0
+                ssim_test = 0.0
+                l2_test = 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
                     gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
@@ -406,50 +417,72 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                             tb_writer.add_images(config['name'] + "_view_{}/ground_truth".format(viewpoint.image_name), gt_image[None], global_step=iteration)
                     l1_test += l1_loss(image, gt_image).mean().double()
                     psnr_test += psnr(image, gt_image).mean().double()
+                    ssim_test += ssim(image, gt_image).mean().double()
+                    l2_test += l2_loss(image, gt_image).mean().double()
                 psnr_test /= len(config['cameras'])
-                l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {} render: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
+                l1_test /= len(config['cameras'])  
+                ssim_test /= len(config['cameras'])    
+                l2_test /= len(config['cameras'])  
+                print("\n[ITER {}] Evaluating {} render: L1 {} PSNR {} SSIM {} L2 {}".format(iteration, config['name'], l1_test, psnr_test, ssim_test, l2_test))
                 if tb_writer:
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
                 
                 met_rough_occ_l1_test = 0.0
                 met_rough_occ_psnr_test = 0.0
+                met_rough_occ_ssim_test = 0.0
+                met_rough_occ_l2_test = 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     met_rough_occ_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'met_rough_occ')["render"], 0.0, 1.0)
-                    met_rough_occ_gt_image = torch.clamp(viewpoint.mro_image.to("cuda"), 0.0, 1.0)
+                    met_rough_occ_gt_image = torch.clamp(viewpoint.mro_image_gt.to("cuda"), 0.0, 1.0)
                     
                     met_rough_occ_l1_test += l1_loss(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
                     met_rough_occ_psnr_test += psnr(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                    met_rough_occ_ssim_test += ssim(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
+                    met_rough_occ_l2_test += l2_loss(met_rough_occ_image, met_rough_occ_gt_image).mean().double()
                 met_rough_occ_psnr_test /= len(config['cameras'])
-                met_rough_occ_l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {} met_rough_occ: L1 {} PSNR {}".format(iteration, config['name'], met_rough_occ_l1_test, met_rough_occ_psnr_test))
+                met_rough_occ_l1_test /= len(config['cameras'])     
+                met_rough_occ_ssim_test /= len(config['cameras'])    
+                met_rough_occ_l2_test /= len(config['cameras'])       
+                print("\n[ITER {}] Evaluating {} met_rough_occ: L1 {} PSNR {} SSIM {} L2 {}".format(iteration, config['name'], met_rough_occ_l1_test, met_rough_occ_psnr_test, met_rough_occ_ssim_test, met_rough_occ_l2_test))
 
 
                 base_color_l1_test = 0.0
                 base_color_psnr_test = 0.0
+                base_color_ssim_test = 0.0
+                base_color_l2_test = 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     base_color_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'base_color')["render"], 0.0, 1.0)
-                    base_color_gt_image = torch.clamp(viewpoint.bc_image.to("cuda"), 0.0, 1.0)
+                    base_color_gt_image = torch.clamp(viewpoint.bc_image_gt.to("cuda"), 0.0, 1.0)
                     
                     base_color_l1_test += l1_loss(base_color_image, base_color_gt_image).mean().double()
                     base_color_psnr_test += psnr(base_color_image, base_color_gt_image).mean().double()
+                    base_color_ssim_test += ssim(base_color_image, base_color_gt_image).mean().double()
+                    base_color_l2_test += l2_loss(base_color_image, base_color_gt_image).mean().double()
                 base_color_psnr_test /= len(config['cameras'])
-                base_color_l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {} base_color: L1 {} PSNR {}".format(iteration, config['name'], base_color_l1_test, base_color_psnr_test))
+                base_color_l1_test /= len(config['cameras'])    
+                base_color_ssim_test /= len(config['cameras'])    
+                base_color_l2_test /= len(config['cameras'])     
+                print("\n[ITER {}] Evaluating {} base_color: L1 {} PSNR {} SSIM {} L2 {}".format(iteration, config['name'], base_color_l1_test, base_color_psnr_test, base_color_ssim_test, base_color_l2_test))
 
 
                 normal_l1_test = 0.0
                 normal_psnr_test = 0.0
+                normal_ssim_test = 0.0
+                normal_l2_test = 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     normal_image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs, data_type = 'normal')["render"], 0.0, 1.0)
-                    normal_gt_image = torch.clamp(viewpoint.normal_image.to("cuda"), 0.0, 1.0)
+                    normal_gt_image = torch.clamp(viewpoint.normal_image_gt.to("cuda"), 0.0, 1.0)
                     
-                    normal_l1_test += l1_loss(normal_image, normal_gt_image).mean().double()
+                    normal_l1_test += mae_loss(normal_image, normal_gt_image).mean().double()
                     normal_psnr_test += psnr(normal_image, normal_gt_image).mean().double()
+                    normal_ssim_test += ssim(normal_image, normal_gt_image).mean().double()
+                    normal_l2_test += l2_loss(normal_image, normal_gt_image).mean().double()
                 normal_psnr_test /= len(config['cameras'])
-                normal_l1_test /= len(config['cameras'])          
-                print("\n[ITER {}] Evaluating {} normal: L1 {} PSNR {}".format(iteration, config['name'], normal_l1_test, normal_psnr_test))
+                normal_l1_test /= len(config['cameras'])     
+                normal_ssim_test /= len(config['cameras']) 
+                normal_l2_test /= len(config['cameras']) 
+                print("\n[ITER {}] Evaluating {} normal: L1 {} PSNR {} SSIM {} L2 {}".format(iteration, config['name'], normal_l1_test, normal_psnr_test, normal_ssim_test, normal_l2_test))
 
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)

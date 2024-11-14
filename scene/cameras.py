@@ -19,7 +19,7 @@ class Camera(nn.Module):
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  projection_matrix = None, bc_image = None, mro_image = None, normal_image=None,
-                 camera_position=None, depth_image = None
+                 camera_position=None, depth_image = None, K=None, bc_image_gt = None, mro_image_gt = None, normal_image_gt=None,
                  ):
         super(Camera, self).__init__()
 
@@ -27,6 +27,7 @@ class Camera(nn.Module):
         self.colmap_id = colmap_id
         self.R = R
         self.T = T
+        self.K = K
         self.FoVx = FoVx
         self.FoVy = FoVy
         self.image_name = image_name
@@ -44,14 +45,17 @@ class Camera(nn.Module):
         self.original_image = image.to(self.data_device) # there were .clamp(0.0, 1.0) for each image
         if bc_image is not None:
             self.bc_image = bc_image.to(self.data_device)
+            self.bc_image_gt = bc_image_gt.to(self.data_device)
             #self.bc_image_mask = nn.Parameter(torch.ones_like(bc_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
             self.bc_image_mask = nn.Parameter(torch.zeros_like(bc_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if mro_image is not None:
             self.mro_image = mro_image.to(self.data_device)
+            self.mro_image_gt = mro_image_gt.to(self.data_device)
             #self.mro_image_mask = nn.Parameter(torch.ones_like(mro_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
             self.mro_image_mask = nn.Parameter(torch.zeros_like(mro_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if normal_image is not None:
             self.normal_image = normal_image.to(self.data_device)
+            self.normal_image_gt = normal_image_gt.to(self.data_device)
             #self.normal_image_mask = nn.Parameter(torch.ones_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
             self.normal_image_mask = nn.Parameter(torch.zeros_like(normal_image, dtype=torch.float32).to(self.data_device).requires_grad_(True))
         if depth_image is not None:

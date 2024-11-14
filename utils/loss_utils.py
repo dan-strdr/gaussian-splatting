@@ -13,12 +13,41 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
+from torch.nn.functional import normalize
+import math
 
 def l1_loss(network_output, gt):
     return torch.abs((network_output - gt)).mean()
 
 def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
+
+def mae_loss(network_output, gt):
+
+    #print("network_output.shape", network_output.shape)
+
+    network_output = normalize(network_output, dim=0)
+
+    network_output = torch.clip(network_output, 0, 1)
+    network_output = network_output*2-1
+    network_output = normalize(network_output, dim=0).view(3, -1).T
+
+    gt = normalize(gt, dim=0)
+
+    gt = torch.clip(gt, 0, 1)
+    gt = gt*2-1
+    #print("N.shape", N.shape)
+    gt = normalize(gt, dim=0).view(3, -1).T
+
+    #print(torch.mul(network_output, gt).sum(axis=1))
+
+    mul = torch.clip(torch.mul(network_output, gt).sum(axis=1), -1, 1)
+
+
+    #print(torch.acos(torch.mul(network_output, gt).sum(axis=1)).min())
+    #print(torch.acos(torch.mul(network_output, gt).sum(axis=1)).max())
+
+    return (torch.acos(mul)*180/math.pi).mean()
 
 def gaussian(window_size, sigma):
     gauss = torch.Tensor([exp(-(x - window_size // 2) ** 2 / float(2 * sigma ** 2)) for x in range(window_size)])

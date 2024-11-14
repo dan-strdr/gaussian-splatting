@@ -15,7 +15,7 @@ cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
 
 cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
 
-output_path = 'normal_corrected5'
+output_path = 'normal_corrected6'
 
 os.makedirs(output_path, exist_ok=True)
 
@@ -29,7 +29,7 @@ for idx, key in enumerate(cam_extrinsics):
     image_name = os.path.basename(image_path).split(".")[0]
     image = Image.open(image_path)
 
-    normal_image_path = os.path.join(path, 'normal', os.path.basename(extr.name))
+    normal_image_path = os.path.join(path, 'normal_wrong_gt', os.path.basename(extr.name))
     normal_image = Image.open(normal_image_path)
     image_shape = np.array(normal_image).shape
     

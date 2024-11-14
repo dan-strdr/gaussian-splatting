@@ -25,6 +25,24 @@ from utils.shading_utils import deferred_shade
 import numpy as np
 import cv2
 import torchvision.transforms as T
+from plyfile import PlyElement, PlyData
+
+def storePly(path, xyz, rgb):
+    # Define the dtype for the structured array
+    dtype = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
+            ('nx', 'f4'), ('ny', 'f4'), ('nz', 'f4'),
+            ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+    
+    normals = np.zeros_like(xyz)
+
+    elements = np.empty(xyz.shape[0], dtype=dtype)
+    attributes = np.concatenate((xyz, normals, rgb), axis=1)
+    elements[:] = list(map(tuple, attributes))
+
+    # Create the PlyData object and write to file
+    vertex_element = PlyElement.describe(elements, 'vertex')
+    ply_data = PlyData([vertex_element])
+    ply_data.write(path)
 
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
 
@@ -115,16 +133,53 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     view = views[18]
 
     met_rough_occ_image = render_combined(view, gaussians, pipeline, background, data_type = 'met_rough_occ')["render"]
-    #met_rough_occ_image = view.mro_image.cuda()
+    met_rough_occ_image = view.mro_image.cuda()
 
     t3 = time()
 
     base_color_image = render_combined(view, gaussians, pipeline, background, data_type = 'base_color')["render"]
+    base_color_image = view.bc_image.cuda()
 
     t4 = time()
 
     normal_image = render_combined(view, gaussians, pipeline, background, data_type = 'normal')["render"]
+    normal_image = view.normal_image.cuda()
+    print("normal_image.shape", normal_image.shape)
 
+
+    rendered_depth_image = render_combined(view, gaussians, pipeline, background, data_type = 'depth')["render"]
+    rendered_depth_image_mean = rendered_depth_image.median()
+    
+
+    depth_image = view.depth_image.cuda()[0]
+    multiply_coef = rendered_depth_image_mean/depth_image.median()
+    depth_image *= multiply_coef
+
+    print("depth_image.shape", depth_image.shape)
+
+    K_inv = torch.tensor(np.linalg.inv(view.K), dtype=torch.float32).cuda()
+
+    R_gpu = torch.tensor(view.R, dtype=torch.float32).cuda()
+    T_gpu = torch.tensor(view.T, dtype=torch.float32).cuda()
+
+    point_map = torch.zeros((depth_image.shape[0], depth_image.shape[1], 3), dtype=torch.float32).cuda()
+
+    i_map = np.linspace(0, 948, depth_image.shape[0])
+    j_map = np.linspace(0, 1440, depth_image.shape[1])
+
+    for i in range(depth_image.shape[0]):
+        for j in range(depth_image.shape[1]):
+            #point_map[i][j] = depth_image[i][j] * K_inv @ torch.tensor(np.array([j, i, 1]), dtype=torch.float32).cuda()
+            point_map[i][j] = depth_image[i][j] * K_inv @ torch.tensor(np.array([j_map[j], i_map[i], 1]), dtype=torch.float32).cuda()
+            point_map[i][j] = R_gpu @ point_map[i][j] - R_gpu @ T_gpu
+
+    point_map_cpu = point_map.detach().cpu().numpy()
+    p = point_map_cpu.reshape(-1, 3)
+    c = np.ones_like(p)
+    storePly('try.ply', p, c)
+
+    point_map = torch.transpose(torch.transpose(point_map, 1, 2), 0, 1)
+    print("point_map.shape", point_map.shape)
     #transform = T.GaussianBlur(kernel_size=(15, 15), sigma=(50, 50))
 
     #std_filter = torch.ones(3, 3)/9
@@ -151,6 +206,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     position_image = position_image*(gaussians.get_xyz.max()-gaussians.get_xyz.min()) + gaussians.get_xyz.min()
     #position_image = (position_image-position_image.min())/(position_image.max()-position_image.min())
     #torchvision.utils.save_image(position_image, "try.png")
+    position_image = point_map
 
     for light_id, light_coordinate in tqdm(enumerate(light_coordinates), desc="Rendering progress"):
         light_pos = torch.from_numpy(light_coordinates[light_id]).unsqueeze(0).to('cuda')

@@ -58,6 +58,16 @@ def loadCam(args, id, cam_info, resolution_scale):
     resized_normal_image_rgb = PILtoTorch(cam_info.normal_image, resolution)
     normal_image = resized_normal_image_rgb[:3, ...]
 
+
+    resized_bc_image_rgb = PILtoTorch(cam_info.bc_image_gt, resolution)
+    bc_image_gt = resized_bc_image_rgb[:3, ...]
+
+    resized_mro_image_rgb = PILtoTorch(cam_info.mro_image_gt, resolution)
+    mro_image_gt = resized_mro_image_rgb[:3, ...]
+
+    resized_normal_image_rgb = PILtoTorch(cam_info.normal_image_gt, resolution)
+    normal_image_gt = resized_normal_image_rgb[:3, ...]
+
     if cam_info.depth_image is not None:
         resized_depth_image_rgb = PILtoTorch(cam_info.depth_image, resolution)
         depth_image = resized_depth_image_rgb[:3, ...]
@@ -76,7 +86,8 @@ def loadCam(args, id, cam_info, resolution_scale):
                 image_name=cam_info.image_name, uid=id, data_device="cpu",# data_device=args.data_device,
                 projection_matrix=cam_info.projection_matrix, bc_image=bc_image, 
                 mro_image=mro_image, normal_image=normal_image, camera_position=cam_info.camera_position,
-                depth_image=depth_image)
+                depth_image=depth_image, K=cam_info.K, bc_image_gt=bc_image_gt, 
+                mro_image_gt=mro_image_gt, normal_image_gt=normal_image_gt)
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
@@ -84,6 +95,8 @@ def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     for id, c in enumerate(cam_infos):
         print(id)
         camera_list.append(loadCam(args, id, c, resolution_scale))
+        if id==20:
+            break
 
     return camera_list
 
